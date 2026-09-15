@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
 import type { ProfilePayload } from '../api.js';
+import { ProfileEditor } from './ProfileEditor.js';
 
 /**
  * The verified facts, and the file that gets attached.
@@ -16,6 +17,7 @@ export function Profile(): React.ReactElement {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   async function upload(): Promise<void> {
     const file = fileRef.current?.files?.[0];
@@ -96,13 +98,27 @@ export function Profile(): React.ReactElement {
                 </div>
               </div>
 
-              <div className="grid">
-                <Fact k="Email" v={data.profile.email} />
-                <Fact k="Phone" v={data.profile.phone} />
-                <Fact k="Location" v={data.profile.location} />
-                <Fact k="Current title" v={data.profile.currentTitle} />
-              </div>
+              {editing ? (
+                <ProfileEditor
+                  payload={data}
+                  onDone={() => { setEditing(false); reload(); }}
+                  onCancel={() => setEditing(false)}
+                />
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button className="btn" onClick={() => setEditing(true)}>Edit these facts</button>
+                  </div>
+                  <div className="grid">
+                    <Fact k="Email" v={data.profile.email} />
+                    <Fact k="Phone" v={data.profile.phone} />
+                    <Fact k="Location" v={data.profile.location} />
+                    <Fact k="Current title" v={data.profile.currentTitle} />
+                  </div>
+                </>
+              )}
 
+              {!editing && (
               <div className="card">
                 <header>
                   <span className="lbl">Skills you claim</span>
@@ -118,7 +134,9 @@ export function Profile(): React.ReactElement {
                   </p>
                 </div>
               </div>
+              )}
 
+              {!editing && (
               <div className="card">
                 <header><span className="lbl">Experience</span></header>
                 <div className="pad">
@@ -144,6 +162,7 @@ export function Profile(): React.ReactElement {
                   </p>
                 </div>
               </div>
+              )}
 
               <div className="card">
                 <header>

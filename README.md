@@ -26,7 +26,7 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Sent-record archive — written once, hashed | working (`/api/applications/:id/sent`) |
 | Follow-ups on applications gone quiet | working (`/api/followups`) |
 | Web front end — four screens, real data | working (`pnpm dev`, :5174) |
-| `GET /api/profile` | working |
+| Profile — read and edit, strictly validated | working (`GET/PUT /api/profile`) |
 
 ## Running it
 

@@ -29,6 +29,8 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Profile — read and edit, strictly validated | working (`GET/PUT /api/profile`) |
 | Résumé parsing — confidence per field, corrected before saving | working (`POST /api/resume/parse`) |
 | Targeting variants — one set of facts, aimed differently | working (`/api/variants`) |
+| Export everything, machine-readable | working (`GET /api/export`) |
+| Erasure — rows, files and archives | working (`DELETE /api/account`) |
 
 ## Running it
 

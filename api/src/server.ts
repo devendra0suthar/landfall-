@@ -9,6 +9,7 @@ import { registerGapRoutes } from './routes/gaps.js';
 import { registerProfileEditRoutes } from './routes/profile-edit.js';
 import { registerParseRoutes } from './routes/parse.js';
 import { registerVariantRoutes } from './routes/variants.js';
+import { registerAccountRoutes } from './routes/account.js';
 
 /**
  * The API.
@@ -35,6 +36,7 @@ await registerGapRoutes(app);
 await registerProfileEditRoutes(app);
 await registerParseRoutes(app);
 await registerVariantRoutes(app);
+await registerAccountRoutes(app);
 
 const port = Number(process.env.PORT ?? 5175);
 

@@ -11,6 +11,7 @@
     "db:push": "pnpm --filter ./api db:push",
     "db:studio": "pnpm --filter ./api db:studio",
     "ingest": "pnpm --filter ./api ingest",
-    "seed": "pnpm --filter ./api seed"
+    "seed": "pnpm --filter ./api seed",
+    "test": "pnpm --filter ./api test"
   }
 }

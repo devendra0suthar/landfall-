@@ -46,8 +46,10 @@ one is wrong even when it passes review on every other axis.
   wrong country shows someone a role they cannot take.
 - Comments explain *why*, especially where the obvious implementation is the
   wrong one. Match the density already in the file.
-- TypeScript strict, `noUncheckedIndexedAccess` on. `pnpm typecheck` before
-  anything is called done.
+- TypeScript strict, `noUncheckedIndexedAccess` on. `pnpm typecheck` AND
+  `pnpm test` before anything is called done — every bug this project has
+  actually shipped type-checked perfectly. A test that encodes a rule from the
+  list above is worth more than one that covers a line.
 
 ## Commands
 
@@ -56,6 +58,7 @@ pnpm dev            api (:5175) and web (:5174) together
 pnpm ingest -- <board-token>   pull a Greenhouse board into the index
 pnpm db:push        apply schema.prisma
 pnpm typecheck      both packages
+pnpm test           22 tests, no network — fixtures in api/test/fixtures/
 ```
 
 Local Postgres: role `landfall`, database `landfall`, see `api/.env.example`.

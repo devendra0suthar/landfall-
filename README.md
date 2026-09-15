@@ -31,6 +31,7 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Targeting variants — one set of facts, aimed differently | working (`/api/variants`) |
 | Export everything, machine-readable | working (`GET /api/export`) |
 | Erasure — rows, files and archives | working (`DELETE /api/account`) |
+| Tests — 22, against real captured fixtures | `pnpm test` |
 
 ## Running it
 

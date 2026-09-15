@@ -66,6 +66,9 @@ export interface JobPosting {
   absoluteUrl: string;
   location: string | null;
   updatedAt: string | null;
+  /** The employer's display name, when the vendor publishes one. */
+  companyName?: string | null;
+
   /** Description HTML, when the vendor returns it with the listing. */
   content?: string | null;
 

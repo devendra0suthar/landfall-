@@ -19,6 +19,7 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Fill plan — a source recorded per field | working (`/api/jobs/:id/plan`) |
 | Match scoring, with its signals | working (on `/api/jobs` and `/api/jobs/:id`) |
 | Tailored résumé + PDF, integrity-checked | working (`/api/jobs/:id/resume[.pdf]`) |
+| Cover-letter starters — facts plus prompts | working (`/api/jobs/:id/letter`) |
 | Résumé upload, download, replace, delete | working (`/api/resume`) |
 | Applications + tracker | working (`/api/applications`) |
 | Sent-record archive — written once, hashed | working (`/api/applications/:id/sent`) |

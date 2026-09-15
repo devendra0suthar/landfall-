@@ -97,7 +97,10 @@ async function writeJob(
       boardId,
       externalId: posting.vendorJobId,
       title: posting.title,
-      company: posting.boardToken,
+      // The board token is a slug ("addepar1"); the employer has an actual
+      // name and the vendor publishes it. A candidate should never see a slug
+      // on a résumé filename or in a letter salutation.
+      company: posting.companyName ?? posting.boardToken,
       location,
       country: countryOf(location),
       remote: facts.workplace === 'remote',
@@ -112,6 +115,7 @@ async function writeJob(
     },
     update: {
       title: posting.title,
+      company: posting.companyName ?? posting.boardToken,
       location,
       country: countryOf(location),
       remote: facts.workplace === 'remote',

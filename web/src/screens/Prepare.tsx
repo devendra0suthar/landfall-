@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
-import type { JobScore, Plan, PlanAction, Tailored } from '../api.js';
+import type { JobScore, LetterStarter, Plan, PlanAction, Tailored } from '../api.js';
 
 /**
  * Preparing one application.
@@ -183,6 +183,8 @@ export function Prepare({ jobId }: { jobId: string }): React.ReactElement {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+            {(counts?.needsWriting ?? 0) > 0 && <Starter jobId={jobId} />}
+
             <div className="card">
               <header>
                 <span className="lbl">Tailored résumé</span>
@@ -276,6 +278,103 @@ export function Prepare({ jobId }: { jobId: string }): React.ReactElement {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * The one field a plan cannot resolve.
+ *
+ * Built on demand rather than with the page: a starter is worth a request only
+ * when the candidate asks for one, and showing it unbidden invites them to send
+ * it as-is — which is the failure the brackets exist to prevent.
+ */
+function Starter({ jobId }: { jobId: string }): React.ReactElement {
+  const [starter, setStarter] = useState<LetterStarter | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+
+  async function build(): Promise<void> {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await api<{ starter: LetterStarter }>(`/api/jobs/${encodeURIComponent(jobId)}/letter`);
+      setStarter(res.starter);
+      setDraft(res.starter.text);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="card">
+      <header>
+        <span className="lbl">The letter — yours to finish</span>
+        {starter && (
+          <span className="sub">
+            {starter.facts.length} verified facts · {starter.placeholders.length} for you
+          </span>
+        )}
+      </header>
+      <div className="pad">
+        {!starter ? (
+          <>
+            <p className="sub">
+              A scaffold built only from facts you have verified, with a bracketed prompt
+              wherever only you can answer. It is deliberately unfinished — a complete letter
+              would be this app writing a claim in your name.
+            </p>
+            {err && <div className="note bad"><p className="sub">{err}</p></div>}
+            <button className="btn" onClick={() => void build()} disabled={busy}>
+              {busy ? 'Building…' : 'Build a starter'}
+            </button>
+          </>
+        ) : (
+          <>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={16}
+              style={{
+                width: '100%', fontFamily: 'inherit', fontSize: '0.88rem', lineHeight: 1.5,
+                padding: 11, border: '1px solid var(--rule)', borderRadius: 4,
+                background: 'var(--surface)', color: 'var(--ink)', resize: 'vertical',
+              }}
+            />
+            <p className="sub">
+              <strong>{draft.replace(/[[^]]*]/g, '').split(/s+/).filter(Boolean).length}</strong>{' '}
+              words of real prose — brackets do not count, because they are prompts, not writing.
+              {draft.includes('[') && (
+                <span style={{ color: 'var(--stop)' }}> {draft.split('[').length - 1} prompt(s) still unanswered.</span>
+              )}
+            </p>
+            <details>
+              <summary className="lbl" style={{ cursor: 'pointer' }}>What went into it</summary>
+              <div style={{ paddingTop: 10 }}>
+                {starter.facts.map((f) => (
+                  <div className="plan" key={`${f.field}-${f.value}`}>
+                    <span className={f.source === 'profile' ? 'chip ok' : 'chip'}>{f.source}</span>
+                    <span>
+                      <span className="lbl">{f.field}</span>
+                      <span style={{ display: 'block' }}>{f.value}</span>
+                    </span>
+                  </div>
+                ))}
+                {starter.wouldHelp.length > 0 && (
+                  <p className="sub" style={{ marginTop: 10 }}>
+                    Filling in {starter.wouldHelp.join(', ')} would remove a prompt.
+                  </p>
+                )}
+                {starter.missingContext.map((m) => (
+                  <p className="sub" key={m} style={{ marginTop: 8 }}>{m}</p>
+                ))}
+              </div>
+            </details>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

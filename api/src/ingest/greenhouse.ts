@@ -34,6 +34,8 @@ interface GhJobSummary {
   absolute_url?: string;
   updated_at?: string;
   location?: { name?: string };
+  /** The employer's display name. "Addepar", where the token is "addepar1". */
+  company_name?: string;
   /** HTML, and only when the request asked for content=true. */
   content?: string;
 }
@@ -211,6 +213,7 @@ export async function listJobs(boardToken: string): Promise<JobPosting[]> {
       absoluteUrl: j.absolute_url ?? '',
       location: j.location?.name ?? null,
       updatedAt: j.updated_at ?? null,
+      companyName: j.company_name ?? null,
       content: j.content ?? null,
     }];
   });

@@ -101,6 +101,15 @@ export interface Tailored {
   }>;
 }
 
+export interface LetterStarter {
+  text: string;
+  facts: Array<{ field: string; value: string; source: 'profile' | 'posting' }>;
+  placeholders: string[];
+  wouldHelp: string[];
+  missingContext: string[];
+  wordCount: number;
+}
+
 export interface AppRow {
   id: string;
   status: 'SAVED' | 'READY' | 'APPLIED' | 'SKIPPED';

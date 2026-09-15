@@ -4,6 +4,7 @@ import { compilePlan } from '../plan/plan.js';
 import { tailor } from '../resume/tailor.js';
 import { renderResume, resumeFilename } from '../resume/document.js';
 import { loadBank, loadIndexed, loadPosting, loadProfile } from '../profile/load.js';
+import { buildStarter } from '../compose/letter.js';
 
 /**
  * Preparing one application.
@@ -116,6 +117,49 @@ export async function registerPrepareRoutes(app: FastifyInstance): Promise<void>
       coverage: t.coverage,
       roles: t.roles,
       text: t.text,
+    };
+  });
+
+  /**
+   * A starter for the one field a plan cannot resolve: prose.
+   *
+   * Verified facts, assembled into sentences, with a bracketed prompt wherever
+   * only the candidate can supply the answer. It is deliberately unfinished —
+   * a complete letter would be this app writing a claim on their behalf, which
+   * is the one thing it does not do (FR-13, CLAUDE.md rule 1).
+   */
+  app.get('/api/jobs/:id/letter', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const candidateId = await currentCandidateId();
+    if (!candidateId) return reply.code(409).send({ error: 'no candidate profile yet' });
+
+    const [job, profile] = await Promise.all([loadIndexed(id), loadProfile(candidateId)]);
+    if (!job) return reply.code(404).send({ error: 'no such job' });
+    if (!profile) return reply.code(409).send({ error: 'no candidate profile yet' });
+
+    const starter = buildStarter(
+      {
+        boardToken: job.boardToken,
+        company: job.company,
+        title: job.title,
+        location: job.location,
+        absoluteUrl: job.absoluteUrl,
+        // Requirements-section terms when the posting states requirements, the
+        // whole posting when it does not — the same evidence split the scorer
+        // uses, so the letter and the match score never disagree about what
+        // the employer asked for.
+        asks: job.facts.requiredSkills.length > 0 ? job.facts.requiredSkills : job.facts.skills,
+      },
+      profile,
+    );
+
+    return {
+      starter,
+      // Counted separately so the UI can be honest about the split: this many
+      // sentences rest on facts they verified, and this many gaps are theirs
+      // to close. A single "80% done" would flatter both numbers.
+      grounded: starter.facts.length,
+      yours: starter.placeholders.length,
     };
   });
 

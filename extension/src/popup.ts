@@ -38,19 +38,19 @@ const row = (chip: string, cls: string, text: string): string =>
   `<div class="row"><span class="chip ${cls}">${esc(chip)}</span><span>${esc(text)}</span></div>`;
 
 async function run(): Promise<void> {
-  const jobId = ($('job') as HTMLInputElement).value.trim();
   const out = $('out');
   const button = $('go') as HTMLButtonElement;
 
-  if (!jobId) {
-    out.textContent = 'Paste the job id from Landfall first.';
+  const [current] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!current?.url) {
+    out.innerHTML = row('stopped', 'bad', 'no active tab to read');
     return;
   }
 
   button.disabled = true;
-  out.textContent = 'Asking Landfall what it can fill…';
+  out.textContent = 'Working out which posting this is…';
 
-  const prepared = await chrome.runtime.sendMessage({ type: 'landfall:prepare', jobId });
+  const prepared = await chrome.runtime.sendMessage({ type: 'landfall:prepare', url: current.url });
 
   if (!prepared?.ok) {
     out.innerHTML = row('stopped', 'bad', prepared?.error ?? 'unknown error');
@@ -58,8 +58,11 @@ async function run(): Promise<void> {
     return;
   }
 
+  const heading = row(prepared.posting.company, 'ok', prepared.posting.title);
+
   if (prepared.plan.formState !== 'readable') {
-    out.innerHTML = row('no plan', 'warn', prepared.plan.message ?? 'this vendor publishes no form schema');
+    out.innerHTML = heading
+      + row('no plan', 'warn', prepared.plan.message ?? 'this vendor publishes no form schema');
     button.disabled = false;
     return;
   }
@@ -73,16 +76,15 @@ async function run(): Promise<void> {
     value: a.value ?? undefined,
   }));
 
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) {
-    out.innerHTML = row('stopped', 'bad', 'no active tab');
+  if (!current.id) {
+    out.innerHTML = heading + row('stopped', 'bad', 'this tab cannot be scripted');
     button.disabled = false;
     return;
   }
 
   let report: Report;
   try {
-    report = await chrome.tabs.sendMessage(tab.id, {
+    report = await chrome.tabs.sendMessage(current.id, {
       type: 'landfall:fill',
       actions,
       resume: prepared.resume,
@@ -90,14 +92,14 @@ async function run(): Promise<void> {
   } catch {
     // "Landfall is not running here" and "Landfall ran and found nothing" are
     // different states, and a spinner would flatten them into one.
-    out.innerHTML = row('stopped', 'bad',
+    out.innerHTML = heading + row('stopped', 'bad',
       "Landfall is not running on this page. Open the employer's application form on a supported board.");
     button.disabled = false;
     return;
   }
 
   if (report.blocked) {
-    out.innerHTML = row('stopped', 'bad', report.blocked);
+    out.innerHTML = heading + row('stopped', 'bad', report.blocked);
     button.disabled = false;
     return;
   }
@@ -105,6 +107,7 @@ async function run(): Promise<void> {
   const byLabel = report.fill.filter((f) => f.via === 'label').length;
 
   out.innerHTML = [
+    heading,
     row(`${report.fill.length} filled`, 'ok', report.attached
       ? `including ${report.attached}`
       : 'no file attached — check the résumé field yourself before submitting'),

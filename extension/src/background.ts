@@ -18,6 +18,25 @@ interface PlanResponse {
   }>;
 }
 
+interface ResolveResponse {
+  jobId: string;
+  title: string;
+  company: string;
+  formState: 'readable' | 'not-published' | 'unknown';
+}
+
+/**
+ * Which posting is the candidate looking at?
+ *
+ * The tab's URL answers it, so nobody has to carry an id between windows.
+ */
+async function resolveUrl(url: string): Promise<ResolveResponse> {
+  const res = await fetch(`${API}/api/jobs/resolve?url=${encodeURIComponent(url)}`);
+  const body = await res.json() as ResolveResponse & { error?: string };
+  if (!res.ok) throw new Error(body.error ?? `the API returned ${res.status}`);
+  return body;
+}
+
 async function planFor(jobId: string): Promise<PlanResponse> {
   const res = await fetch(`${API}/api/jobs/${encodeURIComponent(jobId)}/plan`);
   if (!res.ok) throw new Error(`the API returned ${res.status}`);
@@ -41,12 +60,13 @@ async function resume(): Promise<{ filename: string; contentType: string; base64
   };
 }
 
-chrome.runtime.onMessage.addListener((msg: { type: string; jobId?: string }, _sender, respond) => {
-  if (msg.type === 'landfall:prepare' && msg.jobId) {
+chrome.runtime.onMessage.addListener((msg: { type: string; url?: string }, _sender, respond) => {
+  if (msg.type === 'landfall:prepare' && msg.url) {
     void (async () => {
       try {
-        const [plan, file] = await Promise.all([planFor(msg.jobId!), resume()]);
-        respond({ ok: true, plan, resume: file });
+        const posting = await resolveUrl(msg.url!);
+        const [plan, file] = await Promise.all([planFor(posting.jobId), resume()]);
+        respond({ ok: true, posting, plan, resume: file });
       } catch (err) {
         // Named plainly: the commonest cause is that the API is not running,
         // and "failed to fetch" sends people to the wrong place entirely.

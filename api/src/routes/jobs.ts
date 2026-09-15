@@ -4,6 +4,7 @@ import { prisma } from '../lib/db.js';
 import { loadBank, loadPosting, loadProfile, toIndexed } from '../profile/load.js';
 import { scoreJob } from '../score/score.js';
 import { compilePlan } from '../plan/plan.js';
+import { parsePostingUrl } from '../ingest/resolve.js';
 
 /**
  * Reading the index.
@@ -85,6 +86,50 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
           match: match ? { score: match.score, confidence: match.confidence } : null,
         });
       }),
+    };
+  });
+
+  /**
+   * Which indexed posting is this page?
+   *
+   * Registered before /api/jobs/:id so "resolve" is never read as an id. The
+   * extension calls this with the tab's URL, which removes the one step a
+   * candidate should never have to do: find an internal id in one window and
+   * type it into another.
+   */
+  app.get('/api/jobs/resolve', async (req, reply) => {
+    const url = String((req.query as { url?: string }).url ?? '');
+    const ref = parsePostingUrl(url);
+    if (!ref) {
+      return reply.code(422).send({
+        error: 'that does not look like a job posting Landfall can read',
+        url,
+      });
+    }
+
+    const job = await prisma.job.findFirst({
+      where: {
+        externalId: ref.vendorJobId,
+        board: { slug: ref.boardToken, vendor: 'GREENHOUSE' },
+      },
+      select: { id: true, title: true, company: true, formFetchedAt: true, formReadable: true },
+    });
+
+    if (!job) {
+      // Parsed fine, simply not indexed here. A different answer from "we
+      // cannot read this URL", and the candidate can act on it.
+      return reply.code(404).send({
+        error: 'Landfall has not indexed this posting yet',
+        ...ref,
+      });
+    }
+
+    return {
+      ...ref,
+      jobId: job.id,
+      title: job.title,
+      company: job.company,
+      formState: job.formFetchedAt ? (job.formReadable ? 'readable' : 'not-published') : 'unknown',
     };
   });
 

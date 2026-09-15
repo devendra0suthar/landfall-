@@ -1,6 +1,7 @@
 packages:
   - api
   - web
+  - extension
 
 # pnpm 11 keeps build-script approval here rather than in package.json.
 # Prisma generates its client in a postinstall; esbuild unpacks a binary.

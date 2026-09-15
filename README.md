@@ -32,7 +32,8 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Export everything, machine-readable | working (`GET /api/export`) |
 | Erasure — rows, files and archives | working (`DELETE /api/account`) |
 | Fill matcher — plan onto a rendered form, two renderings | working (`api/src/fill/match.ts`) |
-| Tests — 31, against real captured fixtures | `pnpm test` |
+| Tier A extension — fills the employer's form, never submits | built, **untested in a real browser** (`extension/`) |
+| Tests — 34, against real captured fixtures | `pnpm test` |
 
 ## Running it
 

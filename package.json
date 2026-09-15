@@ -12,6 +12,7 @@
     "db:studio": "pnpm --filter ./api db:studio",
     "ingest": "pnpm --filter ./api ingest",
     "seed": "pnpm --filter ./api seed",
-    "test": "pnpm --filter ./api test"
+    "test": "pnpm --filter ./api test && pnpm --filter ./extension test",
+    "build:extension": "pnpm --filter ./extension build"
   }
 }

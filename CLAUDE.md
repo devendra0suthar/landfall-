@@ -6,8 +6,10 @@ Interactive prototype of the four screens: `design/Main.dc.html`.
 ## Layout
 
 ```
-api/    Fastify + Prisma. Ingest adapters, plan compiler, records.
-web/    Vite + React, static build. Talks to the API, renders nothing server-side.
+api/       Fastify + Prisma. Ingest adapters, plan compiler, records.
+web/       Vite + React, static build. Talks to the API, renders nothing server-side.
+extension/ Tier A. Fills the employer's own form. Contains no submit path, and
+           a test enforces that by absence — see extension/test/no-submit.test.ts.
 docs/   REQUIREMENTS.md is the spec. Numbered FR-/NFR- ids are referenced in code.
 design/ The prototype canvas (Design Components format).
 ```

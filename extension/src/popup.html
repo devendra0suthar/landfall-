@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0; width: 360px; font: 13px/1.5 system-ui, sans-serif;
+        background: #edf0f4; color: #0f1a24;
+      }
+      header { background: #0f1a24; color: #fafbfc; padding: 12px 14px; }
+      header strong { font-size: 15px; letter-spacing: -0.02em; }
+      header p { margin: 4px 0 0; font-size: 11px; color: #8296a8; }
+      main { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+      input, button {
+        font: inherit; padding: 7px 9px; border: 1px solid #c6d0da; border-radius: 4px;
+        background: #fafbfc; color: #0f1a24;
+      }
+      button { font-weight: 600; cursor: pointer; }
+      button.p { background: #12556b; border-color: #12556b; color: #fafbfc; }
+      button:disabled { opacity: .5; cursor: default; }
+      .row { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #dce3ea; }
+      .chip {
+        font: 10px/1 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .07em;
+        padding: 3px 6px; border-radius: 3px; background: #e3e8ee; color: #35485a; white-space: nowrap;
+      }
+      .ok { background: #d7e9df; color: #1f6b4a; }
+      .warn { background: #f4e5c8; color: #8a5a10; }
+      .bad { background: #f3dad5; color: #9b2c22; }
+      .note { font-size: 12px; color: #35485a; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Landfall</strong>
+      <p>Fills this form. Never submits it.</p>
+    </header>
+    <main>
+      <input id="job" placeholder="Job id from Landfall" />
+      <button id="go" class="p">Fill this form</button>
+      <div id="out" class="note">Open the employer's application form, paste the job id, and fill.</div>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

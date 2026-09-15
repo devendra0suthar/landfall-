@@ -5,6 +5,7 @@ import { Tracker } from './screens/Tracker.js';
 import { Profile } from './screens/Profile.js';
 import { Gaps } from './screens/Gaps.js';
 import { ParseReview } from './screens/ParseReview.js';
+import { Aim } from './Aim.js';
 
 /**
  * The shell, and the router.
@@ -61,9 +62,12 @@ export function App(): React.ReactElement {
           <a href="#/gaps" className={route.name === 'gaps' ? 'on' : ''}>Gaps</a>
           <a href="#/profile" className={route.name === 'profile' ? 'on' : ''}>Profile</a>
         </nav>
-        <div className="region" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <span className="lbl">Your data lives in</span>
-          <span className="mono" style={{ color: '#b8c7d4' }}>India · ap-south-1</span>
+        <div className="region" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Aim />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span className="lbl">Your data lives in</span>
+            <span className="mono" style={{ color: '#b8c7d4' }}>India · ap-south-1</span>
+          </div>
         </div>
       </aside>
 

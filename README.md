@@ -28,6 +28,7 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Web front end — four screens, real data | working (`pnpm dev`, :5174) |
 | Profile — read and edit, strictly validated | working (`GET/PUT /api/profile`) |
 | Résumé parsing — confidence per field, corrected before saving | working (`POST /api/resume/parse`) |
+| Targeting variants — one set of facts, aimed differently | working (`/api/variants`) |
 
 ## Running it
 

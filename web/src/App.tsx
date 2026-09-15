@@ -4,6 +4,7 @@ import { Prepare } from './screens/Prepare.js';
 import { Tracker } from './screens/Tracker.js';
 import { Profile } from './screens/Profile.js';
 import { Gaps } from './screens/Gaps.js';
+import { ParseReview } from './screens/ParseReview.js';
 
 /**
  * The shell, and the router.
@@ -18,7 +19,8 @@ type Route =
   | { name: 'prepare'; jobId: string }
   | { name: 'tracker'; appId?: string }
   | { name: 'gaps' }
-  | { name: 'profile' };
+  | { name: 'profile' }
+  | { name: 'parse' };
 
 function parse(hash: string): Route {
   const path = hash.replace(/^#\/?/, '');
@@ -26,6 +28,7 @@ function parse(hash: string): Route {
   if (head === 'prepare' && id) return { name: 'prepare', jobId: id };
   if (head === 'tracker') return id ? { name: 'tracker', appId: id } : { name: 'tracker' };
   if (head === 'gaps') return { name: 'gaps' };
+  if (head === 'parse') return { name: 'parse' };
   if (head === 'profile') return { name: 'profile' };
   return { name: 'jobs' };
 }
@@ -70,6 +73,7 @@ export function App(): React.ReactElement {
         {route.name === 'tracker' && <Tracker appId={route.appId} />}
         {route.name === 'gaps' && <Gaps />}
         {route.name === 'profile' && <Profile />}
+        {route.name === 'parse' && <ParseReview />}
       </main>
     </div>
   );

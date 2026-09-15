@@ -39,6 +39,9 @@ one is wrong even when it passes review on every other axis.
   caught exactly this with Workday's questionnaire pointer.
 - **Every answer carries its source** (`AnswerSource`). A value with no
   recorded provenance does not go on a form.
+- **A parse is a proposal, never a fact.** `profile/parse.ts` returns a
+  confidence and a reason per field and writes nothing. It becomes true when a
+  person confirms it through `PUT /api/profile`, and not before.
 - **Nullable beats wrong.** `countryOf()` returns null rather than guessing; a
   wrong country shows someone a role they cannot take.
 - Comments explain *why*, especially where the obvious implementation is the

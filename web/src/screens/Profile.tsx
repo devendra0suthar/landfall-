@@ -72,9 +72,12 @@ export function Profile(): React.ReactElement {
                           {new Date(data.resume.uploadedAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <a className="btn" style={{ marginLeft: 'auto' }} href="/api/resume" target="_blank" rel="noopener noreferrer">
-                        Open the file
-                      </a>
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                        <a className="btn" href="/api/resume" target="_blank" rel="noopener noreferrer">
+                          Open the file
+                        </a>
+                        <a className="btn p" href="#/parse">Read it into my profile</a>
+                      </div>
                     </div>
                   ) : (
                     <p className="sub">

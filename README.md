@@ -27,6 +27,7 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Follow-ups on applications gone quiet | working (`/api/followups`) |
 | Web front end — four screens, real data | working (`pnpm dev`, :5174) |
 | Profile — read and edit, strictly validated | working (`GET/PUT /api/profile`) |
+| Résumé parsing — confidence per field, corrected before saving | working (`POST /api/resume/parse`) |
 
 ## Running it
 

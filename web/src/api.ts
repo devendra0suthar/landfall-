@@ -101,6 +101,44 @@ export interface Tailored {
   }>;
 }
 
+export type Confidence = 'high' | 'medium' | 'low';
+
+export interface ParsedField<T> {
+  value: T;
+  confidence: Confidence;
+  reason: string | null;
+  alternatives?: T[];
+}
+
+export interface ParsedRole {
+  title: ParsedField<string>;
+  company: ParsedField<string>;
+  start: ParsedField<string>;
+  end: ParsedField<string | null>;
+  bullets: Array<ParsedField<string>>;
+}
+
+export interface ParseResponse {
+  source: { filename: string; bytes: number; sha256: string };
+  note: string;
+  parsed: {
+    firstName: ParsedField<string>;
+    lastName: ParsedField<string>;
+    email: ParsedField<string>;
+    phone: ParsedField<string>;
+    location: ParsedField<string>;
+    linkedin: ParsedField<string>;
+    currentTitle: ParsedField<string>;
+    skills: Array<ParsedField<string>>;
+    roles: ParsedRole[];
+    needsReview: number;
+    fieldCount: number;
+    textLength: number;
+    excluded: string[];
+    warnings: string[];
+  };
+}
+
 export interface GapRow {
   labelKey: string;
   label: string;

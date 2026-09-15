@@ -101,6 +101,23 @@ export interface Tailored {
   }>;
 }
 
+export interface GapRow {
+  labelKey: string;
+  label: string;
+  kind: 'profile' | 'bankable' | 'perPosting' | 'yours';
+  jobCount: number;
+  requiredCount: number;
+  profileField: string | null;
+  answer: string | null;
+}
+
+export interface GapReport {
+  formsRead: number;
+  totalQuestions: number;
+  rows: { profile: GapRow[]; bankable: GapRow[]; perPosting: GapRow[]; yours: GapRow[] };
+  reach: { profile: number; bankable: number };
+}
+
 export interface LetterStarter {
   text: string;
   facts: Array<{ field: string; value: string; source: 'profile' | 'posting' }>;

@@ -3,11 +3,12 @@ import { Jobs } from './screens/Jobs.js';
 import { Prepare } from './screens/Prepare.js';
 import { Tracker } from './screens/Tracker.js';
 import { Profile } from './screens/Profile.js';
+import { Gaps } from './screens/Gaps.js';
 
 /**
  * The shell, and the router.
  *
- * Hash routing, by hand. The app has four screens and one nested route; a
+ * Hash routing, by hand. The app has five screens and one nested route; a
  * router library would be more code to load than to write, and this keeps the
  * static build free of a dependency that only earns its place at ten screens.
  */
@@ -16,6 +17,7 @@ type Route =
   | { name: 'jobs' }
   | { name: 'prepare'; jobId: string }
   | { name: 'tracker'; appId?: string }
+  | { name: 'gaps' }
   | { name: 'profile' };
 
 function parse(hash: string): Route {
@@ -23,6 +25,7 @@ function parse(hash: string): Route {
   const [head, id] = path.split('/');
   if (head === 'prepare' && id) return { name: 'prepare', jobId: id };
   if (head === 'tracker') return id ? { name: 'tracker', appId: id } : { name: 'tracker' };
+  if (head === 'gaps') return { name: 'gaps' };
   if (head === 'profile') return { name: 'profile' };
   return { name: 'jobs' };
 }
@@ -52,6 +55,7 @@ export function App(): React.ReactElement {
             Prepare
           </a>
           <a href="#/tracker" className={route.name === 'tracker' ? 'on' : ''}>Tracker</a>
+          <a href="#/gaps" className={route.name === 'gaps' ? 'on' : ''}>Gaps</a>
           <a href="#/profile" className={route.name === 'profile' ? 'on' : ''}>Profile</a>
         </nav>
         <div className="region" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -64,6 +68,7 @@ export function App(): React.ReactElement {
         {route.name === 'jobs' && <Jobs />}
         {route.name === 'prepare' && <Prepare jobId={route.jobId} />}
         {route.name === 'tracker' && <Tracker appId={route.appId} />}
+        {route.name === 'gaps' && <Gaps />}
         {route.name === 'profile' && <Profile />}
       </main>
     </div>

@@ -20,6 +20,7 @@ files it wherever it is allowed to — recording exactly what was sent.
 | Match scoring, with its signals | working (on `/api/jobs` and `/api/jobs/:id`) |
 | Tailored résumé + PDF, integrity-checked | working (`/api/jobs/:id/resume[.pdf]`) |
 | Cover-letter starters — facts plus prompts | working (`/api/jobs/:id/letter`) |
+| Answer bank + gap report, ranked by reach | working (`/api/gaps`, `/api/bank/:key`) |
 | Résumé upload, download, replace, delete | working (`/api/resume`) |
 | Applications + tracker | working (`/api/applications`) |
 | Sent-record archive — written once, hashed | working (`/api/applications/:id/sent`) |

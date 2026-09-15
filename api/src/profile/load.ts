@@ -72,7 +72,11 @@ export async function loadProfile(candidateId: string): Promise<CandidateProfile
 
 export async function loadBank(candidateId: string): Promise<AnswerBank> {
   const rows = await prisma.bankAnswer.findMany({ where: { candidateId } });
-  return { answers: rows.map((r) => ({ labelKeys: [r.labelKey], value: r.value })) };
+  // `text` is the field the planner reads — not `value`. Getting this wrong
+  // costs nothing loudly: every lookup still matches on labelKeys, so the bank
+  // looks wired while resolving nothing, and the plan quietly routes every
+  // banked question to the candidate instead.
+  return { answers: rows.map((r) => ({ labelKeys: [r.labelKey], text: r.value })) };
 }
 
 /**

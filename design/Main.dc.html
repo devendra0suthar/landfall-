@@ -1,0 +1,1022 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+  <style>
+    body { margin: 0; font-family: "Source Serif 4", Georgia, serif; color: #0F1A24; }
+    a { color: #12556B; } a:hover { color: #0F1A24; }
+    .lbl { font-family: "IBM Plex Mono", monospace; font-size: 10px; font-weight: 500;
+           text-transform: uppercase; letter-spacing: 0.13em; color: #63788C; }
+    .mono { font-family: "IBM Plex Mono", monospace; }
+    .h { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; letter-spacing: -0.015em; }
+    .nav { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 4px;
+           font-size: 14px; cursor: pointer; }
+    .chip { font-family: "IBM Plex Mono", monospace; font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.07em; padding: 3px 8px; border-radius: 3px; }
+    .btn { font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 13px;
+           padding: 9px 15px; border-radius: 4px; border: 1px solid #C6D0DA; background: #FAFBFC;
+           color: #0F1A24; cursor: pointer; }
+    .btn:hover { border-color: #12556B; }
+    .btn.p { background: #12556B; border-color: #12556B; color: #FAFBFC; }
+    .btn.p:hover { background: #0F4457; }
+    .card { background: #FAFBFC; border: 1px solid #C6D0DA; display: flex; flex-direction: column; }
+    .ch { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          padding: 12px 14px; border-bottom: 1px solid #C6D0DA; background: #E3E8EE; }
+    .frow { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: baseline;
+            padding: 9px 14px; border-bottom: 1px solid #DCE3EA; font-size: 13px; }
+    .opt { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: #35485A; cursor: pointer; }
+    .opt:hover { color: #0F1A24; }
+    .box { width: 14px; height: 14px; border: 1.5px solid #63788C; border-radius: 2px; flex: none; }
+    .fbox { display: flex; flex-direction: column; gap: 9px; padding: 14px 0; border-bottom: 1px solid #DCE3EA; }
+    .pill { font-family: "IBM Plex Mono", monospace; font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.07em; padding: 4px 9px; border-radius: 3px; cursor: pointer; }
+    .score { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 23px;
+             line-height: 1; font-variant-numeric: tabular-nums; }
+    .ok { display: flex; align-items: center; gap: 7px; justify-content: flex-end; }
+    .head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px;
+            padding: 22px 28px 18px; border-bottom: 1px solid #C6D0DA; background: #FAFBFC; }
+  </style>
+</helmet>
+
+<div style="width: 1360px; height: 940px; display: flex; background: #EDF0F4; overflow: hidden">
+
+  <!-- ───────── sidebar: the router ───────── -->
+  <div style="width: 232px; flex: none; background: #0F1A24; display: flex; flex-direction: column; gap: 26px; padding: 22px 16px">
+    <div style="display: flex; flex-direction: column; gap: 9px">
+      <div class="h" style="color: #FAFBFC; font-size: 19px; letter-spacing: -0.02em">Landfall</div>
+      <div style="height: 8px; background-image: repeating-linear-gradient(to right, #35485A 0 1px, transparent 1px 14px)"></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <div class="nav" onClick="{{ goJobs }}" style="{{ navJobs }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        Jobs
+      </div>
+      <div class="nav" onClick="{{ goPrepare }}" style="{{ navPrepare }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/></svg>
+        Prepare
+      </div>
+      <div class="nav" onClick="{{ goTracker }}" style="{{ navTracker }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h16M4 18h9"/></svg>
+        Tracker
+        <span class="chip" style="{{ trackerBadge }}">{{ appliedCount }}</span>
+      </div>
+      <div class="nav" onClick="{{ goUpload }}" style="{{ navUpload }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/></svg>
+        Profile
+        <span class="chip" style="{{ profileBadge }}">{{ flaggedCount }}</span>
+      </div>
+    </div>
+
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 7px">
+      <span class="lbl" style="color: #63788C">Aiming as</span>
+      <span style="color: #E3AC5E; font-size: 14px; font-weight: 600">Data Operations</span>
+      <span class="mono" style="color: #63788C; font-size: 11px">India · ap-south-1</span>
+    </div>
+  </div>
+
+  <!-- ───────── screen 1 · profile and parse review ───────── -->
+  <sc-if value="{{ isUpload }}" hint-placeholder-val="{{ false }}">
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+    <div class="head">
+      <div style="display: flex; flex-direction: column; gap: 5px">
+        <span class="lbl">Profile · résumé</span>
+        <div class="h" style="font-size: 25px">What we read from your file</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span class="chip" style="{{ u.flagChipStyle }}">{{ u.flagChipText }}</span>
+        <span class="chip" style="background: #E3E8EE; color: #35485A">{{ u.confirmedCount }} confirmed</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 22px; padding: 20px 28px; flex: 1; min-height: 0">
+      <div style="width: 306px; flex: none; display: flex; flex-direction: column; gap: 16px">
+        <div class="card" style="padding: 18px; gap: 14px">
+          <div style="display: flex; gap: 12px; align-items: flex-start">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9B2C22" stroke-width="1.4"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/><path d="M9 14h6M9 17h4"/></svg>
+            <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+              <span style="font-size: 15px; font-weight: 600">Priya-Raman-CV.pdf</span>
+              <span class="mono" style="font-size: 11px; color: #63788C">248 KB · 2 pages · added 14:02</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <button class="btn" style="flex: 1">Replace</button>
+            <button class="btn" style="flex: 1; color: #9B2C22">Remove</button>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 18px; gap: 13px">
+          <span class="lbl">What parsing is for</span>
+          <p style="margin: 0; font-size: 13.5px; line-height: 1.55; color: #35485A">
+            It fills the form in for you. It never decides what is true — every field stays
+            exactly as you confirm it, and nothing reaches your profile until you do.
+          </p>
+          <div style="height: 1px; background: #DCE3EA"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px">
+            <span style="color: #35485A">Fields found</span><span class="mono">24</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px">
+            <span style="color: #35485A">Achievement bullets</span><span class="mono">9</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px">
+            <span style="{{ u.lowLabelStyle }}">Low confidence</span><span class="mono" style="{{ u.lowLabelStyle }}">{{ u.flaggedCount }}</span>
+          </div>
+        </div>
+
+        <div style="background: #F3DAD5; border: 1px solid #9B2C22; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+          <span class="lbl" style="color: #9B2C22">Not extracted, on purpose</span>
+          <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #35485A">
+            Date of birth, marital status and photograph were in the file. Landfall does not
+            store them and no employer form will receive them from us.
+          </p>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1; min-width: 0">
+        <div style="display: grid; grid-template-columns: 148px 1fr 132px; gap: 16px; padding: 11px 16px; background: #E3E8EE; border-bottom: 1px solid #C6D0DA">
+          <span class="lbl">Field</span><span class="lbl">What we read</span><span class="lbl" style="text-align: right">Confidence</span>
+        </div>
+
+        <div style="flex: 1; overflow: hidden">
+          <div class="lbl" style="padding: 14px 16px 8px">Contact</div>
+
+          <div style="{{ u.calmRow }}">
+            <span style="font-size: 13.5px; color: #35485A">Full name</span>
+            <span style="font-size: 14.5px">Priya Raman</span>
+            <div class="ok">
+              <div style="display: flex; gap: 2px"><div style="width: 5px; height: 13px; background: #1F6B4A"></div><div style="width: 5px; height: 13px; background: #1F6B4A"></div><div style="width: 5px; height: 13px; background: #1F6B4A"></div></div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F6B4A" stroke-width="2.2"><path d="M4 12l6 6L20 6"/></svg>
+            </div>
+          </div>
+
+          <div style="{{ u.calmRow }}">
+            <span style="font-size: 13.5px; color: #35485A">Email</span>
+            <span class="mono" style="font-size: 13.5px">priya.raman@fastmail.in</span>
+            <div class="ok">
+              <div style="display: flex; gap: 2px"><div style="width: 5px; height: 13px; background: #1F6B4A"></div><div style="width: 5px; height: 13px; background: #1F6B4A"></div><div style="width: 5px; height: 13px; background: #1F6B4A"></div></div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F6B4A" stroke-width="2.2"><path d="M4 12l6 6L20 6"/></svg>
+            </div>
+          </div>
+
+          <div style="{{ u.phoneRowStyle }}">
+            <div style="display: flex; flex-direction: column; gap: 3px">
+              <span style="font-size: 13.5px; color: #35485A">Phone</span>
+              <span class="lbl" style="{{ u.phoneHintStyle }}">{{ u.phoneHint }}</span>
+            </div>
+            <sc-if value="{{ u.phoneOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <div style="display: flex; gap: 8px">
+                  <div class="mono" onClick="{{ u.pickMobile }}" style="{{ u.mobileStyle }}">+91 98290 41765</div>
+                  <div class="mono" onClick="{{ u.pickLandline }}" style="{{ u.landlineStyle }}">+91 291 2510 884</div>
+                </div>
+                <span style="font-size: 12.5px; color: #63788C">Two numbers appear in the file. The second looks like a landline.</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ u.phoneDone }}" hint-placeholder-val="{{ false }}">
+              <span class="mono" style="font-size: 13.5px">{{ u.phoneValue }}</span>
+            </sc-if>
+            <div class="ok">
+              <div style="display: flex; gap: 2px"><div style="{{ u.phoneBar1 }}"></div><div style="{{ u.phoneBar2 }}"></div><div style="{{ u.phoneBar3 }}"></div></div>
+              <sc-if value="{{ u.phoneOpen }}" hint-placeholder-val="{{ true }}">
+                <button class="btn" onClick="{{ u.confirmPhone }}" style="padding: 6px 12px; font-size: 12px">Confirm</button>
+              </sc-if>
+              <sc-if value="{{ u.phoneDone }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F6B4A" stroke-width="2.2"><path d="M4 12l6 6L20 6"/></svg>
+              </sc-if>
+            </div>
+          </div>
+
+          <div class="lbl" style="padding: 18px 16px 8px">Experience</div>
+
+          <div style="{{ u.dateRowStyle }}">
+            <div style="display: flex; flex-direction: column; gap: 3px">
+              <span style="font-size: 13.5px; color: #35485A">Role 2 — end date</span>
+              <span class="lbl" style="{{ u.dateHintStyle }}">{{ u.dateHint }}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="display: flex; align-items: center; gap: 9px">
+                <span style="font-size: 14.5px; font-weight: 600">Analyst — Marwar Systems</span>
+                <span class="mono" style="font-size: 12.5px; color: #63788C">Aug 2021 –</span>
+                <div class="mono" style="{{ u.dateBoxStyle }}">May 2023</div>
+              </div>
+              <sc-if value="{{ u.dateOpen }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size: 12.5px; color: #63788C">Printed as <span class="mono">'21–'23</span>. We guessed the months; correct them if we are wrong.</span>
+              </sc-if>
+            </div>
+            <div class="ok">
+              <div style="display: flex; gap: 2px"><div style="{{ u.dateBar1 }}"></div><div style="{{ u.dateBar2 }}"></div><div style="{{ u.dateBar3 }}"></div></div>
+              <sc-if value="{{ u.dateOpen }}" hint-placeholder-val="{{ true }}">
+                <button class="btn" onClick="{{ u.confirmDate }}" style="padding: 6px 12px; font-size: 12px">Confirm</button>
+              </sc-if>
+              <sc-if value="{{ u.dateDone }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F6B4A" stroke-width="2.2"><path d="M4 12l6 6L20 6"/></svg>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="{{ u.bulletRowStyle }}">
+            <div style="display: flex; flex-direction: column; gap: 3px">
+              <span style="font-size: 13.5px; color: #35485A">Bullet 4 of 5</span>
+              <span class="lbl" style="{{ u.bulletHintStyle }}">{{ u.bulletHint }}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div style="{{ u.bulletBoxStyle }}">
+                Cut weekly reporting from 6 hours to 20 minutes with a Python and SQL pipeline
+              </div>
+              <sc-if value="{{ u.bulletOpen }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size: 12.5px; color: #63788C">The PDF broke this across a column. Check nothing was lost at the join.</span>
+              </sc-if>
+            </div>
+            <div class="ok">
+              <div style="display: flex; gap: 2px"><div style="{{ u.bulletBar1 }}"></div><div style="{{ u.bulletBar2 }}"></div><div style="{{ u.bulletBar3 }}"></div></div>
+              <sc-if value="{{ u.bulletOpen }}" hint-placeholder-val="{{ true }}">
+                <button class="btn" onClick="{{ u.confirmBullet }}" style="padding: 6px 12px; font-size: 12px">Confirm</button>
+              </sc-if>
+              <sc-if value="{{ u.bulletDone }}" hint-placeholder-val="{{ false }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F6B4A" stroke-width="2.2"><path d="M4 12l6 6L20 6"/></svg>
+              </sc-if>
+            </div>
+          </div>
+
+          <div class="lbl" style="padding: 18px 16px 8px">Skills you claim</div>
+          <div style="padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; flex-wrap: wrap; gap: 7px">
+              <span class="chip" style="background: #D7E9DF; color: #1F6B4A">python</span>
+              <span class="chip" style="background: #D7E9DF; color: #1F6B4A">sql</span>
+              <span class="chip" style="background: #D7E9DF; color: #1F6B4A">pandas</span>
+              <span class="chip" style="background: #D7E9DF; color: #1F6B4A">etl</span>
+              <span class="chip" style="background: #D7E9DF; color: #1F6B4A">tableau</span>
+              <span class="chip" style="background: #E3E8EE; color: #63788C">+ add one</span>
+            </div>
+            <span style="font-size: 12.5px; color: #63788C">
+              Read from your skills section only. We do not infer a skill from a bullet — a claim
+              on your behalf is still a claim.
+            </span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-top: 1px solid #C6D0DA; background: #E3E8EE">
+          <span style="font-size: 13px; color: #35485A">{{ u.footerText }}</span>
+          <sc-if value="{{ u.notSaved }}" hint-placeholder-val="{{ true }}">
+            <button class="btn p" onClick="{{ u.save }}">Save to profile</button>
+          </sc-if>
+          <sc-if value="{{ u.saved }}" hint-placeholder-val="{{ false }}">
+            <button class="btn p" onClick="{{ goJobs }}">Find roles →</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ───────── screen 2 · jobs ───────── -->
+  <sc-if value="{{ isJobs }}" hint-placeholder-val="{{ true }}">
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+    <div class="head">
+      <div style="display: flex; flex-direction: column; gap: 5px">
+        <span class="lbl">Live index · refreshed 09:40</span>
+        <div class="h" style="font-size: 25px">{{ j.headline }}</div>
+      </div>
+      <span class="chip" style="background: #E3E8EE; color: #35485A">Greenhouse · Workday · Ashby</span>
+    </div>
+
+    <div style="display: flex; gap: 22px; padding: 20px 28px; flex: 1; min-height: 0">
+      <div class="card" style="width: 254px; flex: none; padding: 4px 16px 16px">
+        <div class="fbox">
+          <span class="lbl">You can work in</span>
+          <div class="opt" onClick="{{ j.toggleIndia }}"><div class="box" style="{{ j.indiaBox }}"></div> India — citizen</div>
+          <div class="opt" onClick="{{ j.toggleEu }}"><div class="box" style="{{ j.euBox }}"></div> EU — no visa needed</div>
+          <div class="opt" onClick="{{ j.toggleUs }}"><div class="box" style="{{ j.usBox }}"></div> US — sponsorship required</div>
+          <span style="font-size: 12px; color: #63788C; line-height: 1.5">{{ j.authHint }}</span>
+        </div>
+        <div class="fbox">
+          <span class="lbl">Country</span>
+          <div class="opt" onClick="{{ j.toggleCIndia }}"><div class="box" style="{{ j.cIndiaBox }}"></div> India <span class="mono" style="margin-left: auto; color: #63788C">612</span></div>
+          <div class="opt" onClick="{{ j.toggleCGermany }}"><div class="box" style="{{ j.cGermanyBox }}"></div> Germany <span class="mono" style="margin-left: auto; color: #63788C">204</span></div>
+          <div class="opt" onClick="{{ j.toggleCRemote }}"><div class="box" style="{{ j.cRemoteBox }}"></div> Remote <span class="mono" style="margin-left: auto; color: #63788C">468</span></div>
+        </div>
+        <div class="fbox" style="border-bottom: 0">
+          <span class="lbl">Posted within</span>
+          <div style="display: flex; gap: 6px">
+            <span class="pill" onClick="{{ j.pick7 }}" style="{{ j.pill7 }}">7d</span>
+            <span class="pill" onClick="{{ j.pick30 }}" style="{{ j.pill30 }}">30d</span>
+            <span class="pill" onClick="{{ j.pick90 }}" style="{{ j.pill90 }}">90d</span>
+          </div>
+          <div class="opt" onClick="{{ j.toggleSalary }}" style="margin-top: 6px"><div class="box" style="{{ j.salaryBox }}"></div> Salary published only</div>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1; min-width: 0">
+        <div style="display: grid; grid-template-columns: 1fr 108px 150px 108px; gap: 18px; padding: 10px 18px; background: #E3E8EE; border-bottom: 1px solid #C6D0DA">
+          <span class="lbl">Role</span><span class="lbl">Match</span><span class="lbl">Readiness</span><span class="lbl"></span>
+        </div>
+
+        <div style="padding: 11px 18px; background: #FDFBF6; border-bottom: 1px solid #DCE3EA; display: flex; gap: 10px; align-items: flex-start">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A6412" stroke-width="1.8" style="margin-top: 2px; flex: none"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.5"/></svg>
+          <span style="font-size: 12.5px; color: #35485A; line-height: 1.5">
+            <strong style="font-weight: 600">Two scores, never averaged.</strong>
+            Match is what we infer about the job. Readiness is how much of its form we can
+            actually fill. A role can be a perfect fit and still a long evening of typing.
+          </span>
+        </div>
+
+        <div style="flex: 1; overflow: hidden">
+          <sc-for list="{{ j.rows }}" as="job" hint-placeholder-count="4">
+            <div style="{{ job.rowStyle }}">
+              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                <span style="font-size: 15.5px; font-weight: 600">{{ job.title }}</span>
+                <span style="font-size: 13px; color: #35485A">{{ job.where }}</span>
+                <div style="display: flex; gap: 6px; align-items: center">
+                  <span class="chip" style="background: #E3E8EE; color: #35485A">{{ job.vendor }}</span>
+                  <span class="mono" style="font-size: 11px; color: #63788C">{{ job.meta }}</span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px">
+                <span class="score" style="{{ job.matchStyle }}">{{ job.match }}</span>
+                <span class="lbl" style="{{ job.matchStyle }}">{{ job.confidence }}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 5px">
+                <span class="mono" style="{{ job.readyStyle }}">{{ job.readyText }}</span>
+                <div style="height: 6px; background: #DCE3EA"><div style="{{ job.barStyle }}"></div></div>
+                <span class="lbl">{{ job.readyNote }}</span>
+              </div>
+              <button class="btn" onClick="{{ job.prepare }}" style="{{ job.btnStyle }}">{{ job.btnLabel }}</button>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ j.hasHidden }}" hint-placeholder-val="{{ true }}">
+            <div style="padding: 13px 18px; background: #F4F6F8; border-bottom: 1px solid #DCE3EA; display: flex; align-items: center; gap: 14px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#63788C" stroke-width="1.8" style="flex: none"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4 4l16 16"/></svg>
+              <span style="font-size: 12.5px; color: #35485A; line-height: 1.5">{{ j.hiddenText }}</span>
+              <button class="btn" onClick="{{ j.toggleUs }}" style="margin-left: auto; white-space: nowrap">Show them anyway</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ j.empty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 40px 18px; display: flex; flex-direction: column; gap: 8px; align-items: center">
+              <span style="font-size: 15px; font-weight: 600">Nothing matches those filters</span>
+              <span style="font-size: 13px; color: #63788C">Widen the country list or the posting age — the index has 1,284 open roles today.</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 13px 18px; border-top: 1px solid #C6D0DA; background: #E3E8EE">
+          <span class="mono" style="font-size: 12px; color: #35485A">{{ j.countText }}</span>
+          <span class="lbl">Click Prepare on any role</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ───────── screen 3 · prepare and apply ───────── -->
+  <sc-if value="{{ isPrepare }}" hint-placeholder-val="{{ false }}">
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 18px 26px 15px; border-bottom: 1px solid #C6D0DA; background: #FAFBFC">
+      <div style="display: flex; flex-direction: column; gap: 5px">
+        <div style="display: flex; align-items: center; gap: 9px">
+          <span class="lbl" onClick="{{ goJobs }}" style="cursor: pointer; color: #12556B">← Jobs</span>
+          <span class="lbl">{{ p.where }} · {{ p.vendor }}</span>
+        </div>
+        <div class="h" style="font-size: 24px">{{ p.title }}</div>
+      </div>
+      <div style="display: flex; gap: 22px; align-items: flex-start">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span class="lbl">Match</span>
+          <span class="h" style="{{ p.matchStyle }}">{{ p.match }}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span class="lbl">Readiness</span>
+          <span class="h" style="font-size: 26px; color: #12556B; font-variant-numeric: tabular-nums">{{ p.readiness }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 18px; padding: 18px 26px; flex: 1; min-height: 0">
+
+      <div class="card" style="width: 376px; flex: none">
+        <div class="ch">
+          <span class="lbl">The fill plan · {{ p.fieldCount }} fields</span>
+          <span class="chip" style="background: #D7E9DF; color: #1F6B4A">{{ p.resolvedChip }}</span>
+        </div>
+        <div style="flex: 1; overflow: hidden">
+          <div class="frow"><span class="chip" style="background: #D7E9DF; color: #1F6B4A">profile</span><span>Priya Raman</span></div>
+          <div class="frow"><span class="chip" style="background: #D7E9DF; color: #1F6B4A">profile</span><span class="mono" style="font-size: 12px">priya.raman@fastmail.in</span></div>
+          <div class="frow"><span class="chip" style="background: #D7E9DF; color: #1F6B4A">profile</span><span class="mono" style="font-size: 12px">{{ u.phoneValue }}</span></div>
+          <div class="frow"><span class="chip" style="background: #D7E9DF; color: #1F6B4A">profile</span><span>Jodhpur, Rajasthan, India</span></div>
+          <div class="frow"><span class="chip" style="background: #E3E8EE; color: #35485A">file</span><span>{{ p.filename }} <span class="lbl">tailored</span></span></div>
+          <div class="frow"><span class="chip" style="background: #F0E2C9; color: #9A6412">bank</span><span>Notice period — 30 days</span></div>
+          <div class="frow"><span class="chip" style="background: #F0E2C9; color: #9A6412">bank</span><span>Willing to relocate — yes, within India</span></div>
+          <div class="frow"><span class="chip" style="background: #F0E2C9; color: #9A6412">bank</span><span>How did you hear about us — job board</span></div>
+          <div class="frow" style="background: #FDFBF6"><span class="chip" style="background: #F4E5C8; color: #8A5A10">draft</span><span>Why {{ p.short }}? <span class="lbl">starter ready</span></span></div>
+          <div class="frow" style="{{ p.authRowStyle }}"><span class="chip" style="{{ p.authChipStyle }}">{{ p.authChipText }}</span><span>{{ p.authRowText }}</span></div>
+          <div class="frow" style="background: #F6F8FA"><span class="chip" style="background: #E3E8EE; color: #63788C">you</span><span>Voluntary demographic questions</span></div>
+          <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+            <span class="lbl">{{ p.moreText }}</span>
+            <span style="font-size: 12.5px; color: #63788C; line-height: 1.5">
+              Every value carries where it came from. Nothing on this list was written by a model.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1; min-width: 0">
+        <div class="ch">
+          <span class="lbl">Tailored résumé</span>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <span class="chip" style="background: #D7E9DF; color: #1F6B4A">every line verbatim</span>
+            <span class="mono" style="font-size: 11px; color: #63788C">{{ p.keptCount }} of 9 bullets</span>
+          </div>
+        </div>
+        <div style="padding: 14px; display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0">
+          <sc-for list="{{ p.kept }}" as="b" hint-placeholder-count="4">
+            <div style="display: flex; gap: 10px; align-items: baseline">
+              <span class="mono" style="font-size: 11px; color: #1F6B4A; width: 18px">{{ b.score }}</span>
+              <span style="font-size: 13px; line-height: 1.5">{{ b.text }}</span>
+            </div>
+          </sc-for>
+          <div style="height: 1px; background: #DCE3EA"></div>
+          <span class="lbl">Dropped for this posting — still in your profile</span>
+          <sc-for list="{{ p.dropped }}" as="b" hint-placeholder-count="2">
+            <div style="display: flex; gap: 10px; align-items: baseline; opacity: 0.55">
+              <span class="mono" style="font-size: 11px; color: #63788C; width: 18px">0</span>
+              <span style="font-size: 13px; line-height: 1.5; text-decoration: line-through; text-decoration-color: #C6D0DA">{{ b.text }}</span>
+            </div>
+          </sc-for>
+
+          <div style="background: #F3DAD5; border-left: 3px solid #9B2C22; padding: 11px 13px; display: flex; flex-direction: column; gap: 4px">
+            <span class="lbl" style="color: #9B2C22">Asked for, and you have not claimed it</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap">
+              <sc-for list="{{ p.missing }}" as="m" hint-placeholder-count="2">
+                <span class="chip" style="background: #FAFBFC; color: #35485A">{{ m.name }}</span>
+              </sc-for>
+            </div>
+            <span style="font-size: 12.5px; color: #35485A; line-height: 1.45">An honest gap. We will not paper over it.</span>
+          </div>
+
+          <div style="margin-top: auto; display: flex; gap: 8px">
+            <button class="btn" style="flex: 1">Copy as text</button>
+            <button class="btn" style="flex: 1">Download PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="width: 344px; flex: none; display: flex; flex-direction: column; gap: 14px; min-height: 0">
+        <div class="card" style="flex: 1; min-height: 0">
+          <div class="ch">
+            <span class="lbl">Only you can answer these</span>
+            <span class="chip" style="{{ p.leftChipStyle }}">{{ p.leftChipText }}</span>
+          </div>
+          <div style="padding: 13px 14px; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 13.5px; font-weight: 600">Why do you want to work at {{ p.short }}?</span>
+              <div style="border: 1px solid #C6D0DA; background: #FAFBFC; padding: 10px; font-size: 12.5px; line-height: 1.5; color: #35485A">
+                I have spent three years on data quality in financial reporting — [what draws you
+                to {{ p.short }} specifically]. My pipeline work at Tessellate cut reporting time
+                from six hours to twenty minutes…
+              </div>
+              <span class="lbl">4 verified facts · 1 prompt for you</span>
+            </div>
+            <div style="height: 1px; background: #DCE3EA"></div>
+            <div style="display: flex; flex-direction: column; gap: 7px">
+              <span style="font-size: 13.5px; font-weight: 600">Are you legally authorised to work in {{ p.country }}?</span>
+              <span style="font-size: 12.5px; color: #35485A; line-height: 1.5">
+                An attestation. Landfall never ticks one for you — that would be a statement you
+                did not make.
+              </span>
+              <div style="display: flex; gap: 8px">
+                <button class="btn" onClick="{{ p.answerYes }}" style="{{ p.yesStyle }}">Yes</button>
+                <button class="btn" onClick="{{ p.answerNo }}" style="{{ p.noStyle }}">No</button>
+              </div>
+              <sc-if value="{{ p.answered }}" hint-placeholder-val="{{ false }}">
+                <span class="mono" style="font-size: 11px; color: #1F6B4A; line-height: 1.5">{{ p.answeredNote }}</span>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #0F1A24; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 9px">
+            <span class="chip" style="background: #14271F; color: #74C79C">Tier A · assisted</span>
+            <span class="lbl" style="color: #8296A8">{{ p.vendor }}</span>
+          </div>
+
+          <sc-if value="{{ p.isReady }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #B8C7D4">
+                We open {{ p.short }}'s own form in your browser and fill {{ p.resolvedCount }}
+                fields. You read it, you press submit. Landfall never submits anything itself.
+              </p>
+              <button class="btn" onClick="{{ p.openForm }}" style="background: #E3AC5E; border-color: #E3AC5E; color: #0F1A24; padding: 12px; font-size: 14px">
+                Open the form and fill it
+              </button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ p.isOpened }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <div style="display: flex; align-items: center; gap: 9px">
+                <div style="width: 9px; height: 9px; border-radius: 50%; background: #E3AC5E"></div>
+                <span style="color: #E8EEF4; font-size: 14px; font-weight: 600">Form open in a new tab</span>
+              </div>
+              <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #B8C7D4">
+                {{ p.resolvedCount }} fields filled. We cannot see whether you pressed submit —
+                only you know that.
+              </p>
+              <div style="display: flex; gap: 8px">
+                <button class="btn" onClick="{{ p.markSent }}" style="flex: 1; background: #E3AC5E; border-color: #E3AC5E; color: #0F1A24">I submitted it</button>
+                <button class="btn" onClick="{{ p.cancel }}" style="flex: 1; background: transparent; border-color: #35485A; color: #B8C7D4">I did not</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ p.isRecorded }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 11px">
+              <div style="display: flex; align-items: center; gap: 9px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#74C79C" stroke-width="2.2"><path d="M4 12l6 6L20 6"/></svg>
+                <span style="color: #E8EEF4; font-size: 14px; font-weight: 600">Recorded, and archived</span>
+              </div>
+              <div style="background: #17242F; padding: 11px 12px; display: flex; flex-direction: column; gap: 5px">
+                <span class="mono" style="font-size: 11.5px; color: #E8EEF4">{{ p.filename }} · {{ p.bytes }} bytes</span>
+                <span class="mono" style="font-size: 10.5px; color: #63788C; word-break: break-all">sha256 {{ p.hashShort }}</span>
+              </div>
+              <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #B8C7D4">
+                Written once. Status stays <span class="mono">submitted</span>, never
+                <span class="mono">confirmed</span>, until they reply.
+              </p>
+              <button class="btn" onClick="{{ goTracker }}" style="background: #E3AC5E; border-color: #E3AC5E; color: #0F1A24">See it in the tracker →</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ───────── screen 4 · tracker ───────── -->
+  <sc-if value="{{ isTracker }}" hint-placeholder-val="{{ false }}">
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+    <div class="head">
+      <div style="display: flex; flex-direction: column; gap: 5px">
+        <span class="lbl">Tracker</span>
+        <div class="h" style="font-size: 25px">What you sent, and to whom</div>
+      </div>
+      <div style="display: flex; gap: 7px">
+        <span class="chip" style="background: #12556B; color: #FAFBFC">Applied {{ appliedCount }}</span>
+        <span class="chip" style="background: #E3E8EE; color: #35485A">Saved 12</span>
+        <span class="chip" style="background: #E3E8EE; color: #35485A">Closed 3</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 20px; padding: 18px 28px; flex: 1; min-height: 0">
+      <div class="card" style="width: 420px; flex: none">
+        <div style="padding: 10px 15px; background: #E3E8EE; border-bottom: 1px solid #C6D0DA; display: flex; justify-content: space-between">
+          <span class="lbl">Newest first</span><span class="lbl">Sent</span>
+        </div>
+        <div style="flex: 1; overflow: hidden">
+          <sc-for list="{{ t.rows }}" as="app" hint-placeholder-count="5">
+            <div onClick="{{ app.pick }}" style="{{ app.style }}">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline">
+                <span style="font-size: 14.5px; font-weight: 600">{{ app.title }}</span>
+                <span class="mono" style="font-size: 11px; color: #63788C">{{ app.date }}</span>
+              </div>
+              <span style="font-size: 13px; color: #35485A">{{ app.company }}</span>
+              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap">
+                <span class="chip" style="{{ app.chip1Style }}">{{ app.chip1 }}</span>
+                <sc-if value="{{ app.hasChip2 }}" hint-placeholder-val="{{ true }}">
+                  <span class="chip" style="{{ app.chip2Style }}">{{ app.chip2 }}</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding: 12px 15px; border-top: 1px solid #C6D0DA; background: #E3E8EE">
+          <span style="font-size: 12.5px; color: #35485A; line-height: 1.5">
+            <strong style="font-weight: 600">Applied</strong> means you told us you applied.
+            Landfall never submits, so it can only record what you say happened.
+          </span>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+        <div class="card">
+          <div class="ch">
+            <span class="lbl">What you sent · frozen {{ t.sel.frozen }}</span>
+            <span class="chip" style="background: #D7E9DF; color: #1F6B4A">tailored for this posting</span>
+          </div>
+          <div style="padding: 16px; display: flex; flex-direction: column; gap: 15px">
+            <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#9B2C22" stroke-width="1.3"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></svg>
+              <div style="display: flex; flex-direction: column; gap: 3px">
+                <span style="font-size: 14.5px; font-weight: 600">{{ t.sel.filename }}</span>
+                <span class="mono" style="font-size: 11.5px; color: #63788C">{{ t.sel.fileMeta }}</span>
+              </div>
+              <button class="btn" style="margin-left: auto">Download what was sent</button>
+            </div>
+
+            <div style="background: #EDF0F4; border: 1px solid #DCE3EA; padding: 11px 13px; display: flex; flex-direction: column; gap: 4px">
+              <span class="lbl">SHA-256 of the archived bytes</span>
+              <span class="mono" style="font-size: 12px; word-break: break-all; color: #35485A">{{ t.sel.hash }}</span>
+              <span style="font-size: 12px; color: #63788C">The download still hashes to this, or it is not the file that went.</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span class="lbl">The bullets they read — verbatim, in this order</span>
+              <sc-for list="{{ t.sel.bullets }}" as="b" hint-placeholder-count="4">
+                <div style="display: flex; gap: 10px; align-items: baseline">
+                  <span class="mono" style="font-size: 11px; color: #63788C">{{ b.n }}</span>
+                  <span style="font-size: 13px; line-height: 1.5">{{ b.text }}</span>
+                </div>
+              </sc-for>
+              <span style="font-size: 12.5px; color: #63788C; line-height: 1.5">{{ t.sel.driftNote }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="{{ t.sel.statusStyle }}">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 14px; font-weight: 600">{{ t.sel.statusTitle }}</span>
+            <span style="font-size: 13px; color: #35485A; line-height: 1.5">{{ t.sel.statusBody }}</span>
+          </div>
+          <sc-if value="{{ t.sel.canFollowUp }}" hint-placeholder-val="{{ true }}">
+            <button class="btn" onClick="{{ t.draft }}" style="margin-left: auto; white-space: nowrap">{{ t.followLabel }}</button>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ t.followOpen }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="padding: 15px 16px; gap: 9px">
+            <span class="lbl">Draft — your facts only, nothing invented</span>
+            <div style="border: 1px solid #DCE3EA; background: #EDF0F4; padding: 11px 13px; font-size: 13px; line-height: 1.55; color: #35485A">
+              I applied for the {{ t.sel.title }} role on {{ t.sel.sentLong }} and wanted to check
+              the search is still open. [One line on why you are still interested.]
+            </div>
+            <div style="display: flex; gap: 8px">
+              <button class="btn" onClick="{{ t.closeDraft }}">Discard</button>
+              <button class="btn p">Copy</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1360,"height":940}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      screen: 'jobs',
+      phone: 'mobile', phoneDone: false, dateDone: false, bulletDone: false, savedProfile: false,
+      india: true, eu: true, us: false, cIndia: true, cGermany: true, cRemote: true,
+      age: 30, salaryOnly: false,
+      job: 'addepar', auth: null, phase: 'ready',
+      sent: [],
+      selected: 'figma', follow: false,
+    };
+  }
+
+  jobs() {
+    return {
+      addepar: {
+        id: 'addepar', short: 'Addepar', title: 'Data Operations Analyst',
+        where: 'Bengaluru, hybrid', company: 'Addepar · Bengaluru', vendor: 'Greenhouse',
+        meta: '2d ago · Rs 18-24L', match: 82, confidence: 'high confidence',
+        readyText: '21 of 23 fields', readyNote: '2 need you', pct: 91, fields: 23, resolved: 21,
+        days: 2, country: 'India', region: 'india', salary: true, needsUs: false, appliedOn: null,
+        filename: 'Priya-Raman-Addepar.pdf', bytes: '2,474',
+        hash: '2af6b3610bc928f93771c15b5100a332bc664d7e67204d331748a163350142db',
+        kept: [
+          { score: 6, text: 'Built a Python and SQL pipeline that cut weekly reporting from 6 hours to 20 minutes.' },
+          { score: 4, text: 'Automated quality checks in pandas, raising agreement from 0.71 to 0.89.' },
+          { score: 3, text: 'Labelled 40,000 support tickets and shipped the taxonomy analytics still uses.' },
+          { score: 3, text: 'Rebuilt the daily ETL in Airflow; cut failed runs from 9 a month to 1.' },
+        ],
+        dropped: [
+          { text: 'Ran the office move and the vendor selection for it.' },
+          { text: 'Trained two interns on the reporting stack.' },
+        ],
+        missing: [{ name: 'dbt' }, { name: 'snowflake' }],
+      },
+      figma: {
+        id: 'figma', short: 'Figma', title: 'Analytics Engineer',
+        where: 'Remote — worldwide', company: 'Figma · Remote', vendor: 'Greenhouse',
+        meta: '5d ago · salary not published', match: 61, confidence: 'medium confidence',
+        readyText: '18 of 22 fields', readyNote: '4 need you', pct: 82, fields: 22, resolved: 18,
+        days: 5, country: 'your country', region: 'remote', salary: false, needsUs: false, appliedOn: '12 Sep',
+        filename: 'Priya-Raman-Figma.pdf', bytes: '2,392',
+        hash: '7c1e04ba99d3f5218ab6c0e47f2d9b3315ca880e6f47d2a1b9e3cc40718de552',
+        kept: [
+          { score: 5, text: 'Automated quality checks in pandas, raising agreement from 0.71 to 0.89.' },
+          { score: 4, text: 'Built a Python and SQL pipeline that cut weekly reporting from 6 hours to 20 minutes.' },
+          { score: 2, text: 'Rebuilt the daily ETL in Airflow; cut failed runs from 9 a month to 1.' },
+        ],
+        dropped: [{ text: 'Labelled 40,000 support tickets and shipped the taxonomy analytics still uses.' }],
+        missing: [{ name: 'dbt' }, { name: 'looker' }],
+      },
+      personio: {
+        id: 'personio', short: 'Personio', title: 'Data Quality Lead',
+        where: 'Berlin, on-site', company: 'Personio · Berlin', vendor: 'Workday',
+        meta: '1d ago · form not published', match: 74, confidence: 'high confidence',
+        readyText: null, readyNote: 'measured when the form opens', pct: 0, fields: 0, resolved: 0,
+        days: 1, country: 'Germany', region: 'germany', salary: false, needsUs: false, appliedOn: '11 Sep',
+        filename: 'Priya-Raman-Personio.pdf', bytes: '2,511',
+        hash: 'b940ac37e5d1682f0c74be9a3358f1d2e6047cb85529ad1f3e0b6672c4a91d08',
+        kept: [
+          { score: 5, text: 'Automated quality checks in pandas, raising agreement from 0.71 to 0.89.' },
+          { score: 3, text: 'Labelled 40,000 support tickets and shipped the taxonomy analytics still uses.' },
+        ],
+        dropped: [{ text: 'Ran the office move and the vendor selection for it.' }],
+        missing: [{ name: 'german' }],
+      },
+      ramp: {
+        id: 'ramp', short: 'Ramp', title: 'Senior Data Analyst',
+        where: 'Remote — India', company: 'Ramp · Remote — India', vendor: 'Ashby',
+        meta: '9d ago · Rs 22-30L', match: 58, confidence: 'medium confidence',
+        readyText: '16 of 25 fields', readyNote: '9 need you', pct: 64, fields: 25, resolved: 16,
+        days: 9, country: 'India', region: 'india', salary: true, needsUs: false, appliedOn: '9 Sep',
+        filename: 'Priya-Raman-Ramp.pdf', bytes: '2,448',
+        hash: 'd3f77a21ce9048b5610fbb2e8c4917ad0e5b3c6621fa84d907e2bb15c0397e4a',
+        kept: [
+          { score: 4, text: 'Built a Python and SQL pipeline that cut weekly reporting from 6 hours to 20 minutes.' },
+          { score: 2, text: 'Rebuilt the daily ETL in Airflow; cut failed runs from 9 a month to 1.' },
+        ],
+        dropped: [{ text: 'Trained two interns on the reporting stack.' }],
+        missing: [{ name: 'dbt' }],
+      },
+      asana: {
+        id: 'asana', short: 'Asana', title: 'Staff Data Engineer',
+        where: '"Remote" — US only', company: 'Asana · US only', vendor: 'Greenhouse',
+        meta: '4d ago · $190-240k', match: 69, confidence: 'high confidence',
+        readyText: '19 of 24 fields', readyNote: '5 need you', pct: 79, fields: 24, resolved: 19,
+        days: 4, country: 'the United States', region: 'remote', salary: true, needsUs: true, appliedOn: null,
+        filename: 'Priya-Raman-Asana.pdf', bytes: '2,401',
+        hash: '9b2c0ea4417df3856ca190be27d4f0839e15cc7a62b0dd4139e7aa5580c31f6e',
+        kept: [
+          { score: 5, text: 'Rebuilt the daily ETL in Airflow; cut failed runs from 9 a month to 1.' },
+          { score: 3, text: 'Built a Python and SQL pipeline that cut weekly reporting from 6 hours to 20 minutes.' },
+        ],
+        dropped: [{ text: 'Ran the office move and the vendor selection for it.' }],
+        missing: [{ name: 'spark' }, { name: 'kafka' }],
+      },
+    };
+  }
+
+  seeded() {
+    return [
+      { id: 'figma', date: '12 Sep', sentLong: '12 September', frozen: '12 Sep, 19:40 IST',
+        chip1: 'résumé archived', chip1Style: 'background: #D7E9DF; color: #1F6B4A',
+        hasChip2: true, chip2: 'replied — screening call', chip2Style: 'background: #E3E8EE; color: #35485A',
+        driftNote: 'A different three bullets than Addepar would see — this posting asked for different evidence.',
+        statusTitle: 'They replied on 15 Sep.',
+        statusBody: 'A screening call was offered. The archive above is the CV to re-read before it.',
+        tone: 'good', canFollowUp: false },
+      { id: 'personio', date: '11 Sep', sentLong: '11 September', frozen: '11 Sep, 08:05 IST',
+        chip1: 'résumé archived', chip1Style: 'background: #D7E9DF; color: #1F6B4A',
+        hasChip2: false, chip2: '', chip2Style: '',
+        driftNote: 'Workday published no form schema, so this one was filled in the browser rather than planned in advance.',
+        statusTitle: 'Sent 4 days ago.',
+        statusBody: 'Too early to chase. We will nudge you if it goes quiet past two weeks.',
+        tone: 'calm', canFollowUp: false },
+      { id: 'ramp', date: '9 Sep', sentLong: '9 September', frozen: '9 Sep, 21:12 IST',
+        chip1: 'CAPTCHA — you finished it', chip1Style: 'background: #F3DAD5; color: #9B2C22',
+        hasChip2: true, chip2: 'résumé archived', chip2Style: 'background: #D7E9DF; color: #1F6B4A',
+        driftNote: 'A CAPTCHA stopped the assisted fill halfway. We recorded that and handed you the tab — we do not solve them.',
+        statusTitle: 'Quiet for 6 days.',
+        statusBody: 'Nothing was charged for this one: the assisted fill did not finish, so it did not count against your plan.',
+        tone: 'warn', canFollowUp: true },
+    ];
+  }
+
+  box(on) { return on ? 'background: #12556B; border-color: #12556B' : 'background: transparent; border-color: #63788C'; }
+  pill(on) { return on ? 'background: #12556B; color: #FAFBFC' : 'background: #E3E8EE; color: #35485A'; }
+  bar(c) { return 'width: 5px; height: 13px; background: ' + c; }
+  flip(k) { this.setState({ [k]: !this.state[k] }); }
+  navStyle(on) {
+    return on ? 'background: #17242F; color: #FAFBFC; font-weight: 600' : 'color: #8296A8';
+  }
+
+  renderVals() {
+    const s = this.state;
+    const J = this.jobs();
+    const job = J[s.job] || J.addepar;
+
+    // ── screen 1 · parse review ──
+    const done = (s.phoneDone ? 1 : 0) + (s.dateDone ? 1 : 0) + (s.bulletDone ? 1 : 0);
+    const flagged = 3 - done;
+    const flagRow = 'display: grid; grid-template-columns: 148px 1fr 132px; gap: 16px; align-items: center; padding: 13px 16px; border-bottom: 1px solid #DCE3EA; border-left: 3px solid #9A6412; background: #FDFBF6';
+    const calmRow = 'display: grid; grid-template-columns: 148px 1fr 132px; gap: 16px; align-items: center; padding: 13px 16px; border-bottom: 1px solid #DCE3EA; background: #FAFBFC';
+    const openBox = 'font-size: 13.5px; border: 1.5px solid #9A6412; background: #FAFBFC; padding: 7px 11px; border-radius: 3px';
+    const doneBox = 'font-size: 13.5px; border: 1px solid #DCE3EA; background: #FAFBFC; padding: 7px 11px; border-radius: 3px';
+    const bars = (isDone, two) => [
+      this.bar(isDone ? '#1F6B4A' : '#9A6412'),
+      this.bar(isDone ? '#1F6B4A' : (two ? '#9A6412' : '#DCE3EA')),
+      this.bar(isDone ? '#1F6B4A' : '#DCE3EA'),
+    ];
+    const pb = bars(s.phoneDone, true), db = bars(s.dateDone, false), bb = bars(s.bulletDone, true);
+
+    // ── screen 2 · jobs ──
+    const regionOn = { india: s.cIndia, germany: s.cGermany, remote: s.cRemote };
+    const passes = (x) => regionOn[x.region] && x.days <= s.age && (!s.salaryOnly || x.salary);
+    const all = Object.keys(J).map((k) => J[k]);
+    const visible = all.filter((x) => (!x.needsUs || s.us) && passes(x));
+    const blocked = all.filter((x) => x.needsUs && !s.us && passes(x));
+
+    const rows = visible.map((x) => ({
+      ...x,
+      readyText: x.readyText === null ? '— unknown' : x.readyText,
+      readyStyle: x.readyText === null ? 'font-size: 13px; color: #63788C' : 'font-size: 13px',
+      rowStyle: 'display: grid; grid-template-columns: 1fr 108px 150px 108px; gap: 18px; align-items: center;'
+        + ' padding: 15px 18px; border-bottom: 1px solid #DCE3EA; background: '
+        + (s.job === x.id ? '#E9EEF3' : '#FAFBFC'),
+      matchStyle: x.match >= 70 ? 'color: #1F6B4A' : 'color: #9A6412',
+      barStyle: 'height: 6px; background: #12556B; width: ' + x.pct + '%',
+      btnLabel: x.appliedOn ? 'Applied ' + x.appliedOn : 'Prepare',
+      btnStyle: x.appliedOn
+        ? 'background: #EDF0F4; color: #63788C; border-color: #DCE3EA'
+        : 'background: #12556B; border-color: #12556B; color: #FAFBFC',
+      prepare: () => this.setState({ screen: 'prepare', job: x.id, auth: null, phase: 'ready' }),
+    }));
+
+    // ── screen 3 · prepare ──
+    const answered = s.auth !== null;
+    const resolved = job.resolved + (answered ? 1 : 0);
+    const alreadySent = s.sent.indexOf(job.id) !== -1;
+
+    // ── screen 4 · tracker ──
+    const sentRecords = s.sent.map((id) => ({
+      id, date: 'just now', sentLong: 'today', frozen: 'just now',
+      chip1: 'résumé archived', chip1Style: 'background: #D7E9DF; color: #1F6B4A',
+      hasChip2: true, chip2: 'you recorded this', chip2Style: 'background: #F0E2C9; color: #9A6412',
+      driftNote: 'Frozen the moment you said you sent it. Edit your profile all you like — this does not move.',
+      statusTitle: 'Sent a moment ago.',
+      statusBody: 'Status is submitted, not confirmed. Only a reply from them can change that.',
+      tone: 'calm', canFollowUp: false,
+    }));
+    const records = sentRecords.concat(this.seeded());
+    const selId = records.filter((r) => r.id === s.selected).length ? s.selected : records[0].id;
+    const selRec = records.filter((r) => r.id === selId)[0];
+    const selJob = J[selId];
+    const tones = {
+      warn: 'background: #F4E5C8; border-left: 3px solid #9A6412; padding: 14px 16px; display: flex; align-items: center; gap: 16px',
+      good: 'background: #D7E9DF; border-left: 3px solid #1F6B4A; padding: 14px 16px; display: flex; align-items: center; gap: 16px',
+      calm: 'background: #FAFBFC; border: 1px solid #C6D0DA; border-left: 3px solid #63788C; padding: 14px 16px; display: flex; align-items: center; gap: 16px',
+    };
+
+    const trackerRows = records.map((r) => {
+      const rj = J[r.id];
+      return {
+        ...r, title: rj.title, company: rj.company,
+        style: 'display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid #DCE3EA; cursor: pointer; '
+          + (r.id === selId
+            ? 'background: #E9EEF3; border-left: 3px solid #12556B; padding: 13px 15px 13px 12px'
+            : 'background: #FAFBFC; padding: 13px 15px'),
+        pick: () => this.setState({ selected: r.id, follow: false }),
+      };
+    });
+
+    return {
+      isUpload: s.screen === 'upload', isJobs: s.screen === 'jobs',
+      isPrepare: s.screen === 'prepare', isTracker: s.screen === 'tracker',
+      navUpload: this.navStyle(s.screen === 'upload'),
+      navJobs: this.navStyle(s.screen === 'jobs'),
+      navPrepare: this.navStyle(s.screen === 'prepare'),
+      navTracker: this.navStyle(s.screen === 'tracker'),
+      goUpload: () => this.setState({ screen: 'upload' }),
+      goJobs: () => this.setState({ screen: 'jobs' }),
+      goPrepare: () => this.setState({ screen: 'prepare' }),
+      goTracker: () => this.setState({ screen: 'tracker', selected: s.sent.length ? s.sent[0] : s.selected }),
+      appliedCount: 3 + s.sent.length,
+      flaggedCount: flagged,
+      trackerBadge: 'margin-left: auto; background: #17242F; color: #8296A8',
+      profileBadge: flagged > 0
+        ? 'margin-left: auto; background: #2C2213; color: #E3AC5E'
+        : 'margin-left: auto; background: #14271F; color: #74C79C',
+
+      u: {
+        confirmedCount: 21 + done, flaggedCount: flagged, calmRow,
+        flagChipText: flagged === 0 ? 'nothing flagged' : flagged + ' need your eye',
+        flagChipStyle: flagged === 0 ? 'background: #D7E9DF; color: #1F6B4A' : 'background: #F0E2C9; color: #9A6412',
+        lowLabelStyle: flagged === 0 ? 'color: #63788C' : 'color: #9A6412',
+        phoneOpen: !s.phoneDone, phoneDone: s.phoneDone,
+        phoneRowStyle: s.phoneDone ? calmRow : flagRow,
+        phoneHint: s.phoneDone ? 'You chose this' : 'Pick one',
+        phoneHintStyle: s.phoneDone ? 'color: #1F6B4A' : 'color: #9A6412',
+        phoneValue: s.phone === 'mobile' ? '+91 98290 41765' : '+91 291 2510 884',
+        mobileStyle: s.phone === 'mobile' ? openBox + '; cursor: pointer' : doneBox + '; color: #63788C; cursor: pointer',
+        landlineStyle: s.phone === 'landline' ? openBox + '; cursor: pointer' : doneBox + '; color: #63788C; cursor: pointer',
+        phoneBar1: pb[0], phoneBar2: pb[1], phoneBar3: pb[2],
+        pickMobile: () => this.setState({ phone: 'mobile' }),
+        pickLandline: () => this.setState({ phone: 'landline' }),
+        confirmPhone: () => this.setState({ phoneDone: true }),
+        dateOpen: !s.dateDone, dateDone: s.dateDone,
+        dateRowStyle: s.dateDone ? calmRow : flagRow,
+        dateHint: s.dateDone ? 'You confirmed it' : 'Ambiguous',
+        dateHintStyle: s.dateDone ? 'color: #1F6B4A' : 'color: #9A6412',
+        dateBoxStyle: s.dateDone ? doneBox : openBox,
+        dateBar1: db[0], dateBar2: db[1], dateBar3: db[2],
+        confirmDate: () => this.setState({ dateDone: true }),
+        bulletOpen: !s.bulletDone, bulletDone: s.bulletDone,
+        bulletRowStyle: s.bulletDone ? calmRow : flagRow,
+        bulletHint: s.bulletDone ? 'You confirmed it' : 'Line wrapped',
+        bulletHintStyle: s.bulletDone ? 'color: #1F6B4A' : 'color: #9A6412',
+        bulletBoxStyle: (s.bulletDone ? doneBox : openBox) + '; line-height: 1.5',
+        bulletBar1: bb[0], bulletBar2: bb[1], bulletBar3: bb[2],
+        confirmBullet: () => this.setState({ bulletDone: true }),
+        saved: s.savedProfile, notSaved: !s.savedProfile,
+        save: () => this.setState({ savedProfile: true }),
+        footerText: s.savedProfile
+          ? 'Saved. Every match score has been recomputed against your confirmed facts.'
+          : (flagged === 0
+            ? 'All 24 fields confirmed. Nothing is left flagged.'
+            : flagged + ' flagged field' + (flagged === 1 ? '' : 's') + ' left. You can save now — flagged fields stay flagged.'),
+      },
+
+      j: {
+        rows, empty: visible.length === 0,
+        headline: visible.length + ' open roles you can actually take',
+        countText: 'Showing ' + visible.length + ' of 1,284 · sorted by match',
+        hasHidden: blocked.length > 0,
+        hiddenText: blocked.length + ' role' + (blocked.length === 1 ? '' : 's') + ' hidden — the posting'
+          + ' says remote, but only inside a country you cannot work in. A barrier is not an opening.',
+        authHint: s.us
+          ? 'Showing US roles that need sponsorship. Most will not answer.'
+          : 'Roles you could not accept are hidden, not greyed. Ticking US brings them back.',
+        indiaBox: this.box(s.india), euBox: this.box(s.eu), usBox: this.box(s.us),
+        cIndiaBox: this.box(s.cIndia), cGermanyBox: this.box(s.cGermany), cRemoteBox: this.box(s.cRemote),
+        salaryBox: this.box(s.salaryOnly),
+        pill7: this.pill(s.age === 7), pill30: this.pill(s.age === 30), pill90: this.pill(s.age === 90),
+        toggleIndia: () => this.flip('india'), toggleEu: () => this.flip('eu'), toggleUs: () => this.flip('us'),
+        toggleCIndia: () => this.flip('cIndia'), toggleCGermany: () => this.flip('cGermany'),
+        toggleCRemote: () => this.flip('cRemote'), toggleSalary: () => this.flip('salaryOnly'),
+        pick7: () => this.setState({ age: 7 }), pick30: () => this.setState({ age: 30 }),
+        pick90: () => this.setState({ age: 90 }),
+      },
+
+      p: {
+        title: job.title, short: job.short, where: job.where, vendor: job.vendor,
+        country: job.country, match: job.match, filename: job.filename, bytes: job.bytes,
+        hashShort: job.hash.slice(0, 18) + '…' + job.hash.slice(-8),
+        matchStyle: 'font-size: 26px; font-variant-numeric: tabular-nums; '
+          + (job.match >= 70 ? 'color: #1F6B4A' : 'color: #9A6412'),
+        readiness: job.fields === 0 ? '—' : Math.round((resolved / job.fields) * 100) + '%',
+        fieldCount: job.fields === 0 ? 'unknown' : job.fields,
+        resolvedChip: resolved + ' resolve', resolvedCount: resolved,
+        moreText: '+ ' + Math.max(job.resolved - 9, 0) + ' more resolved from your profile',
+        kept: job.kept, keptCount: job.kept.length, dropped: job.dropped, missing: job.missing,
+        answered,
+        authRowStyle: answered ? 'background: #FAFBFC' : 'background: #F6F8FA',
+        authChipStyle: answered ? 'background: #D7E9DF; color: #1F6B4A' : 'background: #E3E8EE; color: #63788C',
+        authChipText: answered ? 'you · done' : 'you',
+        authRowText: answered
+          ? (s.auth === 'yes' ? 'Work authorisation — yes' : 'Work authorisation — no')
+          : 'Work authorisation attestation',
+        leftChipText: answered ? '1 left' : '2 left',
+        leftChipStyle: answered ? 'background: #D7E9DF; color: #1F6B4A' : 'background: #F4E5C8; color: #8A5A10',
+        answeredNote: s.auth === 'yes'
+          ? 'You attested this at 14:22. We recorded that you did, not that it is true.'
+          : 'Recorded. Landfall will not submit an attestation you declined.',
+        yesStyle: s.auth === 'yes' ? 'flex: 1; background: #12556B; border-color: #12556B; color: #FAFBFC' : 'flex: 1',
+        noStyle: s.auth === 'no' ? 'flex: 1; background: #12556B; border-color: #12556B; color: #FAFBFC' : 'flex: 1',
+        answerYes: () => this.setState({ auth: 'yes' }),
+        answerNo: () => this.setState({ auth: 'no' }),
+        isReady: s.phase === 'ready' && !alreadySent,
+        isOpened: s.phase === 'opened',
+        isRecorded: s.phase === 'recorded' || (alreadySent && s.phase === 'ready'),
+        openForm: () => this.setState({ phase: 'opened' }),
+        cancel: () => this.setState({ phase: 'ready' }),
+        markSent: () => this.setState({
+          phase: 'recorded',
+          sent: s.sent.indexOf(job.id) === -1 ? [job.id].concat(s.sent) : s.sent,
+          selected: job.id,
+        }),
+      },
+
+      t: {
+        rows: trackerRows,
+        sel: {
+          ...selRec, title: selJob.title, filename: selJob.filename, hash: selJob.hash,
+          fileMeta: selJob.bytes + ' bytes · aimed as Data Operations',
+          statusStyle: tones[selRec.tone],
+          bullets: selJob.kept.map((b, i) => ({ n: '0' + (i + 1), text: b.text })),
+        },
+        followOpen: s.follow,
+        followLabel: s.follow ? 'Drafting…' : 'Draft a follow-up',
+        draft: () => this.setState({ follow: true }),
+        closeDraft: () => this.setState({ follow: false }),
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

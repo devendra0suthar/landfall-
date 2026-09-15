@@ -1,0 +1,16 @@
+{
+  "name": "landfall",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A worldwide job-application platform. See docs/REQUIREMENTS.md.",
+  "scripts": {
+    "dev": "pnpm --parallel --filter ./api --filter ./web dev",
+    "dev:api": "pnpm --filter ./api dev",
+    "dev:web": "pnpm --filter ./web dev",
+    "typecheck": "pnpm -r typecheck",
+    "db:push": "pnpm --filter ./api db:push",
+    "db:studio": "pnpm --filter ./api db:studio",
+    "ingest": "pnpm --filter ./api ingest",
+    "seed": "pnpm --filter ./api seed"
+  }
+}

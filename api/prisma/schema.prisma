@@ -1,0 +1,295 @@
+// Landfall — data model for v0.
+//
+// Shapes follow docs/REQUIREMENTS.md. Two rules from §3 and §8 are enforced
+// here rather than left to application code, because a schema is the only
+// place a rule cannot be forgotten:
+//
+//   1. Nothing in this file stores a demographic, health or attestation
+//      answer. There is no column for one, so there is no accident to have.
+//   2. A SentRecord hangs off an Application and is written once. It cascades
+//      on delete, because erasure wins over immutability (§8).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Vendor {
+  GREENHOUSE
+  LEVER
+  ASHBY
+  SMARTRECRUITERS
+  WORKDAY
+}
+
+enum ApplicationStatus {
+  SAVED
+  READY
+  APPLIED
+  SKIPPED
+}
+
+/// How a field on a form got its value. Every planned action carries one, so
+/// "where did this answer come from?" is always answerable (FR-11).
+enum AnswerSource {
+  PROFILE
+  BANK
+  FILE
+  DRAFT
+  HUMAN
+}
+
+model Candidate {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  /// Where this candidate's data is stored. A deployment property, not a flag
+  /// the candidate can flip (NFR-4).
+  region    String   @default("ap-south-1")
+  createdAt DateTime @default(now())
+
+  profile      Profile?
+  resumes      ResumeFile[]
+  applications Application[]
+  bankAnswers  BankAnswer[]
+  variants     Variant[]
+}
+
+/// The verified facts. Entered once, reused on every form — never inferred
+/// from each other, and never extracted from a résumé without confirmation.
+model Profile {
+  id          String  @id @default(cuid())
+  candidateId String  @unique
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  location    String?
+  city        String?
+  country     String?
+  postalCode  String?
+  linkedin    String?
+  github      String?
+  website     String?
+  currentTitle String?
+
+  /// Self-declared, lowercase. Never inferred from a bullet: a claim made on
+  /// the candidate's behalf is still a claim (FR-6).
+  skills          String[]
+  yearsExperience Int?
+
+  roles     Role[]
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+}
+
+model Role {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  title     String
+  company   String
+  start     String
+  end       String?
+  location  String?
+  position  Int     @default(0)
+
+  bullets Bullet[]
+
+  @@index([profileId])
+}
+
+/// One achievement line, exactly as the candidate wrote it. Tailoring selects
+/// and orders these; nothing rewrites the text (§3.1).
+model Bullet {
+  id       String @id @default(cuid())
+  roleId   String
+  role     Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  text     String
+  position Int    @default(0)
+
+  @@index([roleId])
+}
+
+model ResumeFile {
+  id          String   @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  filename    String
+  contentType String
+  bytes       Int
+  sha256      String
+  /// Region-local object storage key. Never a public URL.
+  storageKey  String
+  uploadedAt  DateTime @default(now())
+  active      Boolean  @default(true)
+
+  @@index([candidateId])
+}
+
+/// One employer's board on one ATS.
+model Board {
+  id            String   @id @default(cuid())
+  vendor        Vendor
+  slug          String
+  name          String?
+  /// Whether this destination may be submitted to. Ships false everywhere —
+  /// see §3.4. Tiering is configuration, not code (FR-35).
+  submitAllowed Boolean  @default(false)
+  disabled      Boolean  @default(false)
+  lastFetchedAt DateTime?
+
+  jobs Job[]
+
+  @@unique([vendor, slug])
+}
+
+model Job {
+  id      String @id @default(cuid())
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  /// The vendor's own id for this posting.
+  externalId  String
+  title       String
+  company     String
+  location    String?
+  country     String?
+  remote      Boolean  @default(false)
+  /// A posting that says "remote" but only inside one country. A barrier is
+  /// not an opening (FR-10).
+  remoteScope String?
+  absoluteUrl String
+  postedAt    DateTime?
+  description String?
+
+  skills         String[]
+  requiredSkills String[]
+
+  /// False when the vendor publishes no form schema — Workday, and the 21.7%
+  /// of postings that cannot be planned offline at all.
+  ///
+  /// Only meaningful once formFetchedAt is set. Before that we have not asked,
+  /// which is a third state: "unknown", not "none". Collapsing the two would
+  /// report a readable Greenhouse form as unreadable simply because it was
+  /// beyond the batch we pulled — the same conflation Phase 0 caught between a
+  /// questionnaire pointer and a questionnaire.
+  formReadable Boolean   @default(false)
+  formFetchedAt DateTime?
+  fetchedAt     DateTime @default(now())
+
+  questions    Question[]
+  applications Application[]
+
+  @@unique([boardId, externalId])
+  @@index([country])
+  @@index([postedAt])
+}
+
+/// One field on an employer's application form, as the vendor describes it.
+model Question {
+  id     String @id @default(cuid())
+  jobId  String
+  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  fieldName String
+  label     String
+  /// The normalised label. This is the key the 9.2x reuse ratio is counted on
+  /// and the key an answer is banked under, so it is stored rather than
+  /// recomputed — a change to normalisation must be a visible migration, not a
+  /// silent re-keying of everyone's saved answers.
+  labelKey  String
+  kind      String
+  required  Boolean @default(false)
+  /// Whether this question can be answered from stored facts at all, or must
+  /// always reach the human (consent, demographic, attestation). Classified at
+  /// ingest from the vendor's own data.
+  answerability String @default("unknown")
+  /// Option lists for selects, verbatim from the vendor. A stored answer that
+  /// matches none of these fails loudly rather than being pushed through raw.
+  options   Json?
+  position  Int     @default(0)
+
+  @@index([jobId])
+}
+
+model Application {
+  id          String @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  jobId       String
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  status    ApplicationStatus @default(SAVED)
+  notes     String?
+  drafts    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sent SentRecord?
+
+  @@unique([candidateId, jobId])
+  @@index([candidateId, status])
+}
+
+/// What actually left, frozen at the moment of sending (FR-20, FR-21).
+///
+/// Written once, on the first transition into APPLIED, and never updated —
+/// enforced in application code, since Postgres has no "insert-only" column.
+/// It disappears with the application and the candidate, because erasure wins.
+model SentRecord {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  sentAt     DateTime @default(now())
+  filename   String
+  sha256     String
+  bytes      Int
+  /// The bullets, verbatim and in the order the employer read them.
+  bullets    String[]
+  variant    String?
+  tailored   Boolean  @default(false)
+  storageKey String
+
+  /// Automatic deletion 24 months after the send, unless the candidate asks
+  /// for sooner (§8).
+  expiresAt DateTime
+}
+
+/// A recurring question answered once and reused. 9.2x reuse across employers
+/// is what makes this worth having (§2).
+model BankAnswer {
+  id          String @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  labelKey  String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@unique([candidateId, labelKey])
+}
+
+/// One set of facts, aimed differently. Overrides only what is about aim —
+/// never contact details or work history, which have one home each.
+model Variant {
+  id          String @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  name         String
+  currentTitle String?
+  skills       String[]
+  active       Boolean @default(false)
+
+  @@unique([candidateId, name])
+}

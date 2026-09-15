@@ -1,0 +1,19 @@
+packages:
+  - api
+  - web
+
+# pnpm 11 keeps build-script approval here rather than in package.json.
+# Prisma generates its client in a postinstall; esbuild unpacks a binary.
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - esbuild
+
+# Smart App Control on this machine blocks Rollup's unsigned native .node
+# binary (ERR_DLOPEN_FAILED, "An Application Control policy has blocked this
+# file"). Rollup ships a WebAssembly build for exactly this case — slower to
+# bundle, identical output. Never work around SAC by disabling it: on Windows
+# Home it cannot be turned back on without reinstalling the OS.
+overrides:
+  rollup: npm:@rollup/wasm-node@^4.63.2

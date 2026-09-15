@@ -1,0 +1,162 @@
+/*
+ * Landfall — the navigational palette from docs/requirements.html, carried
+ * into the product so the spec and the thing look like the same project.
+ *
+ * Sea-ink ground, brass accent, chart-paper neutrals. Semantic colours are
+ * separate from the accent: good/warn/stop say what state something is in,
+ * brass says "look here".
+ */
+
+:root {
+  --paper: #edf0f4;
+  --surface: #fafbfc;
+  --surface-2: #e3e8ee;
+  --ink: #0f1a24;
+  --ink-soft: #35485a;
+  --ink-muted: #63788c;
+  --rule: #c6d0da;
+  --rule-soft: #dce3ea;
+  --brass: #9a6412;
+  --brass-soft: #f0e2c9;
+  --deep: #12556b;
+  --good: #1f6b4a;
+  --good-soft: #d7e9df;
+  --warn: #8a5a10;
+  --warn-soft: #f4e5c8;
+  --stop: #9b2c22;
+  --stop-soft: #f3dad5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .lbl, .btn, .nav a, th { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
+h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+h2 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+h3 { font-size: 0.95rem; font-weight: 700; margin: 0; }
+p { margin: 0; }
+a { color: var(--deep); }
+
+.mono, code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 0.86em; }
+
+.lbl {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.13em;
+  color: var(--ink-muted);
+}
+
+/* ── shell ── */
+
+.shell { display: flex; min-height: 100vh; }
+
+.side {
+  width: 220px; flex: none; background: var(--ink);
+  display: flex; flex-direction: column; gap: 24px; padding: 20px 14px;
+}
+
+.wordmark { color: var(--surface); font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+.ticks { height: 8px; background-image: repeating-linear-gradient(to right, #35485a 0 1px, transparent 1px 14px); }
+
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav a {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 11px; border-radius: 4px; text-decoration: none;
+  color: #8296a8; font-size: 0.9rem;
+}
+.nav a:hover { color: var(--surface); }
+.nav a.on { background: #17242f; color: var(--surface); font-weight: 600; }
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 20px 26px 16px; border-bottom: 1px solid var(--rule); background: var(--surface);
+}
+
+.body { padding: 20px 26px 40px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── pieces ── */
+
+.card { background: var(--surface); border: 1px solid var(--rule); }
+.card > header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 14px; border-bottom: 1px solid var(--rule); background: var(--surface-2);
+}
+.card > .pad { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.chip {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 3px 8px; border-radius: 3px; white-space: nowrap;
+  background: var(--surface-2); color: var(--ink-soft);
+}
+.chip.ok { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--stop-soft); color: var(--stop); }
+.chip.deep { background: var(--deep); color: var(--surface); }
+
+.btn {
+  font-weight: 600; font-size: 0.85rem; padding: 8px 14px; border-radius: 4px;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.btn:hover:not(:disabled) { border-color: var(--deep); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.p { background: var(--deep); border-color: var(--deep); color: var(--surface); }
+
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filters select, .filters input {
+  font-family: inherit; font-size: 0.85rem; padding: 6px 9px;
+  border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); color: var(--ink);
+}
+
+.rows { display: flex; flex-direction: column; }
+.row {
+  display: grid; grid-template-columns: 1fr 120px 150px 110px; gap: 16px; align-items: center;
+  padding: 13px 14px; border-bottom: 1px solid var(--rule-soft); background: var(--surface);
+}
+.row:last-child { border-bottom: 0; }
+.row.sel { background: #e9eef3; }
+.row .t { font-weight: 600; }
+.row .m { font-size: 0.85rem; color: var(--ink-soft); }
+
+.bar { height: 6px; background: var(--rule-soft); }
+.bar > span { display: block; height: 6px; background: var(--deep); }
+
+.plan { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: baseline;
+  padding: 8px 0; border-bottom: 1px solid var(--rule-soft); font-size: 0.88rem; }
+.plan:last-child { border-bottom: 0; }
+
+.bullet { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: baseline; font-size: 0.88rem; }
+.bullet .s { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--good); text-align: right; }
+.bullet.drop { opacity: 0.55; }
+.bullet.drop span:last-child { text-decoration: line-through; text-decoration-color: var(--rule); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+
+.note { border-left: 3px solid var(--brass); background: var(--surface); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px; }
+.note.bad { border-left-color: var(--stop); background: var(--stop-soft); }
+.note.ok { border-left-color: var(--good); background: var(--good-soft); }
+
+.empty { padding: 36px 14px; text-align: center; color: var(--ink-muted); }
+
+.sub { font-size: 0.85rem; color: var(--ink-soft); }
+
+@media (max-width: 760px) {
+  .shell { flex-direction: column; }
+  .side { width: auto; flex-direction: row; align-items: center; gap: 14px; overflow-x: auto; }
+  .side .ticks, .side .region { display: none; }
+  .nav { flex-direction: row; }
+  .row { grid-template-columns: 1fr; gap: 8px; }
+}

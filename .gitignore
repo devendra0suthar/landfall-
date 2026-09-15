@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# Candidate data never belongs in the repo — see docs/REQUIREMENTS.md §8.
+storage/
+*.local
+
+# Editor
+.vscode/
+.idea/
+
+# The seeded design canvas is a build artefact — 2.5 MB of editor payload,
+# regenerated from design/Main.dc.html + canvas.json by the design tooling.
+design/landfall-screens.html

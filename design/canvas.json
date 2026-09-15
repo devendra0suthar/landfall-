@@ -1,0 +1,23 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Landfall — working prototype",
+      "x": 0,
+      "y": 0,
+      "w": 1360,
+      "h": 940,
+      "is_interactive": true
+    }
+  ],
+  "annotations": [
+    {
+      "id": "flow-note",
+      "x": 0,
+      "y": -170,
+      "w": 660,
+      "text": "One app, four screens, real navigation.\nStart on Jobs, press Prepare on a role, answer the attestation, run the apply flow — the application you record appears in the Tracker with its own archive and hash.\nSample data: Priya Raman, the Jodhpur persona from section 4 of the requirements."
+    }
+  ],
+  "launch": { "view": "focused", "file": "Main.dc.html" }
+}

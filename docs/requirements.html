@@ -1,0 +1,1206 @@
+<title>Landfall Requirements</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    /* Navigational instrument: sea-ink ground, brass accent, chart-paper neutrals */
+    --paper:      #EDF0F4;
+    --surface:    #FAFBFC;
+    --surface-2:  #E3E8EE;
+    --ink:        #0F1A24;
+    --ink-soft:   #35485A;
+    --ink-muted:  #63788C;
+    --rule:       #C6D0DA;
+    --rule-soft:  #DCE3EA;
+    --brass:      #9A6412;
+    --brass-soft: #F0E2C9;
+    --deep:       #12556B;
+    --good:       #1F6B4A;
+    --good-soft:  #D7E9DF;
+    --warn:       #8A5A10;
+    --warn-soft:  #F4E5C8;
+    --stop:       #9B2C22;
+    --stop-soft:  #F3DAD5;
+    --measure:    68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #0B1219;
+      --surface:    #111C26;
+      --surface-2:  #17242F;
+      --ink:        #E8EEF4;
+      --ink-soft:   #B8C7D4;
+      --ink-muted:  #8296A8;
+      --rule:       #2A3A48;
+      --rule-soft:  #1E2C38;
+      --brass:      #E3AC5E;
+      --brass-soft: #2C2213;
+      --deep:       #6FBBD6;
+      --good:       #74C79C;
+      --good-soft:  #14271F;
+      --warn:       #E0B25F;
+      --warn-soft:  #2A2114;
+      --stop:       #E08878;
+      --stop-soft:  #2C1917;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #0B1219;
+    --surface:    #111C26;
+    --surface-2:  #17242F;
+    --ink:        #E8EEF4;
+    --ink-soft:   #B8C7D4;
+    --ink-muted:  #8296A8;
+    --rule:       #2A3A48;
+    --rule-soft:  #1E2C38;
+    --brass:      #E3AC5E;
+    --brass-soft: #2C2213;
+    --deep:       #6FBBD6;
+    --good:       #74C79C;
+    --good-soft:  #14271F;
+    --warn:       #E0B25F;
+    --warn-soft:  #2A2114;
+    --stop:       #E08878;
+      --stop-soft:  #2C1917;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-inline: 22px;
+    padding-block: 0 72px;
+  }
+
+  h1, h2, h3, .lbl, .tier-h, .num {
+    font-family: "Bricolage Grotesque", "Archivo", system-ui, sans-serif;
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 7vw, 4.2rem);
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  h2 {
+    font-size: clamp(1.35rem, 3vw, 1.75rem);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+
+  p { margin: 0; max-width: var(--measure); }
+  a { color: var(--deep); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+  strong { font-weight: 600; }
+
+  .mono, code {
+    font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    font-size: 0.86em;
+  }
+
+  code {
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .lbl {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-muted);
+  }
+
+  /* ─── masthead: a landfall tick strip, because the name means one ─── */
+
+  .mast {
+    padding-block: 56px 40px;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .ticks {
+    height: 16px;
+    background-image: repeating-linear-gradient(to right,
+      var(--rule) 0 1px, transparent 1px 28px);
+    border-bottom: 1px solid var(--rule);
+    opacity: 0.9;
+  }
+
+  .mast-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .lede {
+    font-size: clamp(1.1rem, 2.4vw, 1.3rem);
+    line-height: 1.5;
+    color: var(--ink-soft);
+    max-width: 58ch;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 11px;
+    border-radius: 100px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .chip.draft { border-color: var(--brass); background: var(--brass-soft); color: var(--brass); }
+
+  /* ─── contents ─── */
+
+  .toc {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 1px;
+    background: var(--rule-soft);
+    border: 1px solid var(--rule-soft);
+    margin-block: 34px 0;
+  }
+
+  .toc a {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    background: var(--surface);
+    padding: 11px 13px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 0.92rem;
+  }
+
+  .toc a:hover { background: var(--surface-2); }
+  .toc .num { font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; color: var(--brass); }
+
+  /* ─── sections ─── */
+
+  section { padding-block: 46px 0; }
+
+  .sec-h {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+    margin-bottom: 20px;
+  }
+
+  .sec-h .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--brass);
+    padding-top: 4px;
+  }
+
+  .stack { display: flex; flex-direction: column; gap: 18px; }
+  .stack-tight { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ─── tables ─── */
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 560px;
+    font-size: 0.93rem;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+
+  th {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-muted);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+
+  tr:last-child td { border-bottom: 0; }
+  td.n { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ─── measured figures ─── */
+
+  .figs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+
+  .fig {
+    background: var(--surface);
+    padding: 16px 15px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .fig .v {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: 1.85rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .fig .v.hot { color: var(--brass); }
+  .fig .k { font-size: 0.83rem; line-height: 1.35; color: var(--ink-soft); }
+
+  /* ─── callout ─── */
+
+  .call {
+    border-left: 3px solid var(--brass);
+    background: var(--surface);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .call.stop { border-left-color: var(--stop); }
+
+  /* ─── principles ─── */
+
+  .prins { display: flex; flex-direction: column; }
+
+  .prin {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 14px;
+    padding-block: 15px;
+    border-bottom: 1px solid var(--rule-soft);
+    align-items: start;
+  }
+
+  .prin:first-child { border-top: 1px solid var(--rule-soft); }
+  .prin .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--brass);
+    padding-top: 3px;
+  }
+  .prin p { margin-top: 4px; color: var(--ink-soft); font-size: 0.95rem; }
+
+  /* ─── columns ─── */
+
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .col {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .col ul, .out ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .col li, .out li { font-size: 0.92rem; color: var(--ink-soft); }
+
+  .out {
+    border: 1px dashed var(--stop);
+    background: var(--stop-soft);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .out h3 { color: var(--stop); }
+  .out li { color: var(--ink-soft); }
+
+  /* ─── tier ladder ─── */
+
+  .tiers { display: flex; flex-direction: column; gap: 10px; }
+
+  .tier {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    gap: 16px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    padding: 14px 16px;
+    align-items: start;
+  }
+
+  .tier .badge {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    text-align: center;
+    border-radius: 3px;
+  }
+
+  .tier.a { border-left: 4px solid var(--good); }
+  .tier.a .badge { background: var(--good-soft); color: var(--good); }
+  .tier.b { border-left: 4px solid var(--warn); }
+  .tier.b .badge { background: var(--warn-soft); color: var(--warn); }
+  .tier.c { border-left: 4px solid var(--stop); }
+  .tier.c .badge { background: var(--stop-soft); color: var(--stop); }
+
+  .tier-h { font-weight: 700; font-size: 0.97rem; }
+  .tier p { font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px; }
+
+  /* ─── requirement rows ─── */
+
+  .frs { display: flex; flex-direction: column; }
+
+  .fr {
+    display: grid;
+    grid-template-columns: 62px 1fr;
+    gap: 12px;
+    padding-block: 10px;
+    border-bottom: 1px solid var(--rule-soft);
+    align-items: baseline;
+  }
+
+  .fr:first-of-type { border-top: 1px solid var(--rule-soft); }
+  .fr .id { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; color: var(--deep); }
+  .fr .t { font-size: 0.94rem; color: var(--ink-soft); }
+  .fr .t b { color: var(--ink); font-weight: 600; }
+
+  .grp {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--ink-muted);
+    padding-top: 22px;
+    padding-bottom: 6px;
+  }
+
+  /* ─── architecture ─── */
+
+  pre.arch {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.75;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 16px;
+    overflow-x: auto;
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  pre.arch b { color: var(--brass); font-weight: 500; }
+
+  /* ─── decisions ─── */
+
+  .dec {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 14px;
+    padding: 15px 16px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    align-items: start;
+  }
+
+  .dec + .dec { border-top: 0; }
+  .dec .num { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--brass); padding-top: 3px; }
+  .dec p { font-size: 0.93rem; color: var(--ink-soft); margin-top: 4px; }
+
+  /* ─── footer ─── */
+
+  footer {
+    margin-top: 56px;
+    border-top: 2px solid var(--ink);
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .srcs { font-size: 0.86rem; color: var(--ink-muted); max-width: none; line-height: 1.9; }
+
+  @media (max-width: 560px) {
+    body { font-size: 16px; }
+    .prin, .tier, .fr, .dec { grid-template-columns: 1fr; gap: 6px; }
+    .tier .badge { justify-self: start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="ticks" aria-hidden="true"></div>
+    <div class="mast-top">
+      <span class="lbl">Product requirements · draft · 15 September 2026</span>
+      <span class="chip draft">Draft for approval</span>
+    </div>
+    <h1>Landfall</h1>
+    <p class="lede">A worldwide job-application platform. Upload a résumé once; Landfall
+      finds matching roles anywhere on earth, prepares each application from your own
+      facts, and files it wherever it is allowed to — recording exactly what was sent.</p>
+  </header>
+
+  <nav class="toc" aria-label="Contents">
+    <a href="#s1"><span class="num">01</span> Why this, now</a>
+    <a href="#s2"><span class="num">02</span> What we measured</a>
+    <a href="#s3"><span class="num">03</span> Principles</a>
+    <a href="#s4"><span class="num">04</span> Users</a>
+    <a href="#s5"><span class="num">05</span> Scope</a>
+    <a href="#s6"><span class="num">06</span> Requirements</a>
+    <a href="#s7"><span class="num">07</span> Non-functional</a>
+    <a href="#s8"><span class="num">08</span> Legal</a>
+    <a href="#s9"><span class="num">09</span> Architecture</a>
+    <a href="#s10"><span class="num">10</span> Metrics</a>
+    <a href="#s11"><span class="num">11</span> Risks</a>
+    <a href="#s12"><span class="num">12</span> Naming</a>
+    <a href="#s13"><span class="num">13</span> Decisions needed</a>
+    <a href="#s14"><span class="num">14</span> Technology</a>
+  </nav>
+
+  <section id="s1">
+    <div class="sec-h"><span class="num">01</span><h2>Why this, and why now</h2></div>
+    <div class="stack">
+      <p>Applying for work has become data entry. The median application form asks about
+        fifteen questions — the same nine of which cover half of every form on the market —
+        and a serious search means answering them two hundred times.</p>
+      <p>Candidates outside the US pay an extra tax. The roles are global, the forms are
+        American, and the regional boards that actually hold the jobs — Naukri in India,
+        Seek and JobStreet across APAC, Xing in the German-speaking market — are invisible
+        to most tools built in San Francisco.</p>
+      <p>A crowded field already exists. Most of it solves the typing and creates a worse
+        problem: it writes the candidate's claims for them.</p>
+
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>Product</th><th>Model</th><th>Applies by</th><th>Price</th><th>Weakness to exploit</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>LiftmyCV</strong></td>
+              <td>Autopilot / Copilot toggle; generated résumé and letter per role</td>
+              <td>Bot submission, ~10 boards</td>
+              <td class="n">Free · $9.99/mo · $69.99 unlimited; credits charged only on success</td>
+              <td>Generates the candidate's claims; coverage is board-shaped, not ATS-shaped</td>
+            </tr>
+            <tr>
+              <td><strong>Simplify Copilot</strong></td>
+              <td>Browser-extension autofill</td>
+              <td>Human clicks submit</td>
+              <td class="n">Free</td>
+              <td>No discovery, no tailoring, no record of what was sent</td>
+            </tr>
+            <tr>
+              <td><strong>LoopCV</strong></td>
+              <td>Campaign-style bulk apply</td>
+              <td>Bot and email apply</td>
+              <td class="n">Subscription</td>
+              <td>Volume first; quality and honesty are the user's problem</td>
+            </tr>
+            <tr>
+              <td><strong>Teal</strong></td>
+              <td>Résumé builder, tracker, generated answers</td>
+              <td>Human</td>
+              <td class="n">Freemium</td>
+              <td>A workspace, not an agent</td>
+            </tr>
+            <tr>
+              <td><strong>AIApply · FastApply · Resumly</strong></td>
+              <td>"Apply while you sleep"</td>
+              <td>Bot submission</td>
+              <td class="n">Subscription</td>
+              <td>Same fabrication risk, opaque failure</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="call">
+        <span class="lbl">The wedge</span>
+        <p>Everyone competes on volume. Nobody competes on honesty, or on evidence of what
+          actually happened. Landfall takes the opposite bet.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s2">
+    <div class="sec-h"><span class="num">02</span><h2>What we already know, measured</h2></div>
+    <div class="stack">
+      <p>The <code>autoapply</code> Phase 0 repo measured the ingestion problem against
+        541 live postings from 57 employers in September 2026. These are the numbers the
+        architecture rests on — they should not be re-derived.</p>
+
+      <div class="figs">
+        <div class="fig"><span class="v hot">100%</span><span class="k">Greenhouse form schemas readable with no auth and no browser — 541 of 541</span></div>
+        <div class="fig"><span class="v">9.2×</span><span class="k">Question reuse across employers, so an answer bank pays for itself</span></div>
+        <div class="fig"><span class="v hot">91.1%</span><span class="k">Question instances needing no language model at all</span></div>
+        <div class="fig"><span class="v">9</span><span class="k">Unique questions covering half of every form on the market</span></div>
+        <div class="fig"><span class="v hot">63.6%</span><span class="k">Fields filling deterministically from profile, bank and file</span></div>
+        <div class="fig"><span class="v">17.7%</span><span class="k">Fields only the candidate may answer — consent, EEO, health, arbitration</span></div>
+        <div class="fig"><span class="v">0 / 24</span><span class="k">Workday postings exposing a populated question set</span></div>
+        <div class="fig"><span class="v">565 / 565</span><span class="k">Fill actions landing correctly against 60 local fixtures</span></div>
+      </div>
+
+      <div class="call">
+        <span class="lbl">The split that decides the build</span>
+        <p><strong>Greenhouse</strong> can be planned offline and then executed as a known
+          plan. <strong>Workday, Ashby, Lever, SmartRecruiters and iCIMS</strong> expose
+          nothing — their forms must be discovered at runtime, inside a live browser
+          session. This is one product with two execution engines, and pretending
+          otherwise is how the schedule slips.</p>
+      </div>
+
+      <h3>The world outside the US</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Where</th><th>What runs hiring there</th><th>Consequence</th></tr></thead>
+          <tbody>
+            <tr><td>Fortune 500</td><td class="n">Workday ~39% · SAP SuccessFactors ~13%</td><td>Over half the enterprise market publishes no form schema</td></tr>
+            <tr><td>Venture-backed employers</td><td class="n">Greenhouse ~49%</td><td>The cheapest place to start, and a misleading place to stop</td></tr>
+            <tr><td>India</td><td class="n">Naukri 62–70%</td><td>An India launch is a Naukri integration, not a LinkedIn one</td></tr>
+            <tr><td>APAC</td><td>Seek · JobStreet</td><td>Separate adapter family, separate commercial conversation</td></tr>
+            <tr><td>DACH</td><td>Xing · Personio</td><td>German-language forms from day one, not as a later port</td></tr>
+            <tr><td>Everywhere</td><td class="n">Indeed, 130M+ listings</td><td>Largest single pool, strictest terms — official routes only</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="s3">
+    <div class="sec-h"><span class="num">03</span><h2>Principles</h2></div>
+    <div class="stack">
+      <p>Carried over from Phase 0. These are product decisions, not engineering
+        preferences — they are the whole difference between Landfall and the table above.</p>
+      <div class="prins">
+        <div class="prin"><span class="num">01</span><div>
+          <h3>The candidate's words, or nothing</h3>
+          <p>Tailoring selects and orders the bullets they wrote. It never rewrites one and
+            never invents one. Every document passes a verbatim integrity check before it
+            can be sent.</p></div></div>
+        <div class="prin"><span class="num">02</span><div>
+          <h3>Attestations are never automated</h3>
+          <p>"I certify this is true", privacy notices, EEO and demographic questions, visa
+            and health declarations always reach the human. Ticking one on someone's behalf
+            is an attestation they did not make. It costs about 1% of fields.</p></div></div>
+        <div class="prin"><span class="num">03</span><div>
+          <h3>Bot walls are recorded, never evaded</h3>
+          <p>A CAPTCHA, rate limit or reputation check ends the run and hands the session
+            back. No solving services, no residential proxy rotation, no fingerprint
+            spoofing.</p></div></div>
+        <div class="prin"><span class="num">04</span><div>
+          <h3>Submission is allowlisted; reading is not</h3>
+          <p>A destination becomes submittable by explicit configuration. Never by default,
+            never by inference from "it worked in testing".</p></div></div>
+        <div class="prin"><span class="num">05</span><div>
+          <h3>Every send is archived</h3>
+          <p>The exact bytes that went to the employer are stored and hashed. Three weeks
+            later, at the moment an interview makes it matter, "which CV did they see?" has
+            an answer.</p></div></div>
+        <div class="prin"><span class="num">06</span><div>
+          <h3>No claimed success without evidence</h3>
+          <p>An application is <code>submitted</code>, not <code>confirmed</code>, until a
+            confirmation email or a status poll says otherwise.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="s4">
+    <div class="sec-h"><span class="num">04</span><h2>Who it is for</h2></div>
+    <div class="cols">
+      <div class="col">
+        <h3>Priya · Jodhpur</h3>
+        <span class="lbl">3 years, applying India + remote-global</span>
+        <p>Every US form asks the same fifteen questions. Needs volume without typing, and
+          honest handling of visa and relocation questions.</p>
+      </div>
+      <div class="col">
+        <h3>Marco · Berlin</h3>
+        <span class="lbl">Senior, DACH + EU remote</span>
+        <p>Xing and Personio matter more than LinkedIn. Wants to know exactly where his CV
+          is stored and under whose law.</p>
+      </div>
+      <div class="col">
+        <h3>Ade · Lagos</h3>
+        <span class="lbl">New graduate, 200+ applications ahead</span>
+        <p>No budget for a $70/month tool. Needs a free tier that genuinely works, and no
+          invented claim that surfaces in an interview.</p>
+      </div>
+      <div class="col">
+        <h3>Sara · Toronto</h3>
+        <span class="lbl">Career switcher</span>
+        <p>One set of facts aimed at two different job families, without maintaining two
+          profiles that can disagree.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s5">
+    <div class="sec-h"><span class="num">05</span><h2>Scope</h2></div>
+    <div class="stack">
+      <div class="cols">
+        <div class="col">
+          <h3>v0 — prove the engine</h3>
+          <span class="lbl">Greenhouse only · ~8 weeks</span>
+          <ul>
+            <li>Résumé upload, parsed into a correctable structured profile</li>
+            <li>Discovery across Greenhouse boards on a live index</li>
+            <li>Match and readiness scored separately</li>
+            <li>Tailored résumé with the integrity check visible</li>
+            <li>Assisted apply — we fill, the candidate submits</li>
+            <li>Tracker with the sent-document archive</li>
+            <li>Multi-region profile fields from day one</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>v1 — make it global</h3>
+          <span class="lbl">+12 weeks</span>
+          <ul>
+            <li>Runtime form discovery: Workday, Lever, Ashby, SmartRecruiters</li>
+            <li>Regional adapters: Naukri, Seek/JobStreet, Xing, Indeed</li>
+            <li>Answer bank reused across employers</li>
+            <li>Targeting variants</li>
+            <li>Letter starters built only from verified facts</li>
+            <li>Follow-ups on applications gone quiet</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>v2 — autopilot, carefully</h3>
+          <span class="lbl">After real data</span>
+          <ul>
+            <li>Unattended submission, allowlisted destinations only</li>
+            <li>Recruiter-visible profile and inbound interest</li>
+            <li>Interview scheduling handoff</li>
+            <li>Salary and market signal from the index</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="out">
+        <h3>Out of scope — permanently, not "for now"</h3>
+        <ul>
+          <li>Solving or outsourcing CAPTCHAs</li>
+          <li>Proxy rotation, fingerprint spoofing, any evasion of a bot wall</li>
+          <li>Writing claims the candidate did not make</li>
+          <li>Auto-answering EEO, consent, health or attestation questions</li>
+          <li>Mass-submitting to employers who have asked automated traffic not to</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="s6">
+    <div class="sec-h"><span class="num">06</span><h2>Functional requirements</h2></div>
+    <div class="stack">
+      <div class="frs">
+        <div class="grp">Profile and résumé</div>
+        <div class="fr"><span class="id">FR-1</span><span class="t">Upload a résumé — PDF, DOCX, RTF, TXT or MD, up to 8 MB.</span></div>
+        <div class="fr"><span class="id">FR-2</span><span class="t">Parse it into structured fields with a <b>confidence score each</b>, presented for correction. Parsing pre-fills; it never silently becomes truth.</span></div>
+        <div class="fr"><span class="id">FR-3</span><span class="t">Every parsed field is editable, and the candidate can see the document their profile produces at any time.</span></div>
+        <div class="fr"><span class="id">FR-4</span><span class="t">Several résumé files may be stored; exactly one is active per targeting variant.</span></div>
+        <div class="fr"><span class="id">FR-5</span><span class="t">Completeness is reported in <b>form fields unlocked</b>, not as a percentage of our own schema.</span></div>
+        <div class="fr"><span class="id">FR-6</span><span class="t">Sensitive attributes are never stored, never inferred, never required.</span></div>
+
+        <div class="grp">Discovery and matching</div>
+        <div class="fr"><span class="id">FR-7</span><span class="t">Postings are ingested with source, fetch time and canonical URL recorded.</span></div>
+        <div class="fr"><span class="id">FR-8</span><span class="t">Two scores, shown separately and never combined: <b>match</b> and <b>readiness</b>.</span></div>
+        <div class="fr"><span class="id">FR-9</span><span class="t">Filters include country, work authorisation, remote policy, language, published salary and posting age.</span></div>
+        <div class="fr"><span class="id">FR-10</span><span class="t">A role that is remote in one country only is not shown as an opening to someone who cannot take it.</span></div>
+
+        <div class="grp">Preparing an application</div>
+        <div class="fr"><span class="id">FR-11</span><span class="t">Each posting compiles to a <b>fill plan</b> — ordered actions, each with its source recorded.</span></div>
+        <div class="fr"><span class="id">FR-12</span><span class="t">An integrity failure blocks the render rather than degrading it.</span></div>
+        <div class="fr"><span class="id">FR-13</span><span class="t">Prose questions get a starter of verified facts plus explicit prompts. Never a finished lie.</span></div>
+        <div class="fr"><span class="id">FR-14</span><span class="t">Unresolved fields are surfaced as an answer sheet, in form order, ready to copy.</span></div>
+
+        <div class="grp">Tracking</div>
+        <div class="fr"><span class="id">FR-20</span><span class="t">Every application records status, timestamps, and the hashed bytes of what was sent.</span></div>
+        <div class="fr"><span class="id">FR-21</span><span class="t">Re-marking an application never overwrites the first send record.</span></div>
+        <div class="fr"><span class="id">FR-22</span><span class="t">Status is <code>submitted</code>, never <code>confirmed</code>, without external evidence.</span></div>
+        <div class="fr"><span class="id">FR-23</span><span class="t">Follow-up prompts once an application has been quiet beyond a set window.</span></div>
+
+        <div class="grp">Accounts and access</div>
+        <div class="fr"><span class="id">FR-24</span><span class="t">Email or OAuth sign-up. Browsing needs no account; storing anything does.</span></div>
+        <div class="fr"><span class="id">FR-25</span><span class="t">Export everything held about you, machine-readable, without asking a human.</span></div>
+        <div class="fr"><span class="id">FR-26</span><span class="t">Delete your account from inside the product — <b>a feature with a visible outcome, not a support ticket</b>.</span></div>
+        <div class="fr"><span class="id">FR-27</span><span class="t">Re-authenticate before any Tier B or C run, because that run acts in the candidate's name.</span></div>
+
+        <div class="grp">Notifications</div>
+        <div class="fr"><span class="id">FR-28</span><span class="t">Alerts on saved searches, at a frequency the candidate sets — including never.</span></div>
+        <div class="fr"><span class="id">FR-29</span><span class="t">Notify when a run finishes and <b>always when one fails</b>. A silent failure is indistinguishable from a submitted application — the worst state a job seeker can be in.</span></div>
+        <div class="fr"><span class="id">FR-30</span><span class="t">Follow-up reminders use the same channel and obey the same frequency setting.</span></div>
+
+        <div class="grp">Billing</div>
+        <div class="fr"><span class="id">FR-31</span><span class="t">Nothing is charged for a run that did not submit. A CAPTCHA is our limit, not the candidate's cost.</span></div>
+        <div class="fr"><span class="id">FR-32</span><span class="t">Pricing is <b>purchasing-power adjusted by region</b>. A flat $69.99/month is about a week's wages in several launch markets.</span></div>
+        <div class="fr"><span class="id">FR-33</span><span class="t">The free tier completes a real application end to end. A demo tier teaches nobody whether it works.</span></div>
+        <div class="fr"><span class="id">FR-34</span><span class="t">Every charge maps to a specific application, visible in the tracker.</span></div>
+
+        <div class="grp">Operations</div>
+        <div class="fr"><span class="id">FR-35</span><span class="t">Destination tiering is configuration, editable without a deploy, every change recorded and attributed.</span></div>
+        <div class="fr"><span class="id">FR-36</span><span class="t"><b>Any destination can be disabled instantly and globally by one operator</b> — the response when an employer asks us to stop.</span></div>
+        <div class="fr"><span class="id">FR-37</span><span class="t">A published contact address on every automated request, with a human reading the inbox behind it.</span></div>
+        <div class="fr"><span class="id">FR-38</span><span class="t">Abuse controls apply to our own users: implausible volume is rate-limited and reviewed, because that behaviour is what gets the platform blocked.</span></div>
+      </div>
+
+      <h3>Applying — three tiers, chosen per destination</h3>
+      <div class="tiers">
+        <div class="tier a">
+          <span class="badge">Tier A</span>
+          <div>
+            <div class="tier-h">Assisted — the default everywhere <span class="lbl">FR-15</span></div>
+            <p>An extension fills the employer's own form inside the candidate's session;
+              they review and submit. Lawful on every destination, and the only tier
+              permitted where terms prohibit automated access — LinkedIn included.</p>
+          </div>
+        </div>
+        <div class="tier b">
+          <span class="badge">Tier B</span>
+          <div>
+            <div class="tier-h">Supervised auto-apply <span class="lbl">FR-16</span></div>
+            <p>Landfall drives the browser, fills everything, and pauses for one
+              confirmation before submitting. Only where that destination's terms permit it.</p>
+          </div>
+        </div>
+        <div class="tier c">
+          <span class="badge">Tier C</span>
+          <div>
+            <div class="tier-h">Unattended <span class="lbl">FR-17 · ships empty</span></div>
+            <p>No per-application review. Allowed only for destinations on the submit
+              allowlist, which ships with nothing in it. This is the line between a fast
+              assistant and the thing boards ban.</p>
+          </div>
+        </div>
+      </div>
+      <p><span class="lbl">FR-18</span> Any CAPTCHA, login wall or rate limit ends the run
+        and hands back the session, with the reason recorded.
+        <span class="lbl">FR-19</span> Submission rate is capped per candidate per
+        destination — default 25 a day, adjustable downward only.</p>
+    </div>
+  </section>
+
+  <section id="s7">
+    <div class="sec-h"><span class="num">07</span><h2>Non-functional</h2></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td class="n">NFR-1</td><td><strong>Identity.</strong> Honest User-Agent and contact address on every request. Automated traffic is never dressed as a human browser.</td></tr>
+          <tr><td class="n">NFR-2</td><td><strong>Politeness.</strong> ~3 requests/second per destination; negative responses cached so 404s are not re-probed.</td></tr>
+          <tr><td class="n">NFR-3</td><td><strong>Internationalisation.</strong> Non-Latin scripts, right-to-left layout, international phone, address and date formats, and per-country work-authorisation vocabularies — from day one, not as a port.</td></tr>
+          <tr><td class="n">NFR-4</td><td><strong>Data residency.</strong> EU candidates' data stays in the EU. Region is a deployment property, not a config flag.</td></tr>
+          <tr><td class="n">NFR-5</td><td><strong>Accessibility.</strong> WCAG 2.2 AA across the candidate-facing app.</td></tr>
+          <tr><td class="n">NFR-6</td><td><strong>Auditability.</strong> Every automated action reconstructable from logs: what was sent, where, when, on whose instruction.</td></tr>
+          <tr><td class="n">NFR-7</td><td><strong>Cost.</strong> The 63.6% that needs no model must never quietly start calling one. Budget alarm per application.</td></tr>
+          <tr><td class="n">NFR-8</td><td><strong>Security.</strong> Résumés and profiles encrypted at rest, secrets in a managed store, a published disclosure route, a penetration test before the first paid user. We hold complete professional identities — credential-grade data, even with no passwords in it.</td></tr>
+          <tr><td class="n">NFR-9</td><td><strong>Telemetry.</strong> Measure the funnel, not the content. Which fields fail to resolve is a product metric; what a candidate wrote in them is never logged.</td></tr>
+          <tr><td class="n">NFR-10</td><td><strong>Availability.</strong> 99.5% for the app. Every queued run either completes, fails loudly, or is cancelled — never silently dropped.</td></tr>
+          <tr><td class="n">NFR-11</td><td><strong>Verification before live traffic.</strong> Executor changes are proved against local fixtures first. Phase 0 ran 565 fill actions across 60 fixtures with zero failures; that harness is the regression gate.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="s8">
+    <div class="sec-h"><span class="num">08</span><h2>Legal and compliance</h2></div>
+    <div class="stack">
+      <p>The part the competitive set skips. None of this is optional for a platform that
+        says "all over the world".</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Constraint</th><th>What it means for the build</th></tr></thead>
+          <tbody>
+            <tr><td><strong>LinkedIn User Agreement §8.2</strong> bans bots and unauthorised automated access; 2025–26 brought ban waves against extensions</td><td>LinkedIn is <strong>Tier A only</strong> — assisted autofill in the user's own session. No bot submission to LinkedIn, ever.</td></tr>
+            <tr><td><strong>Indeed and Glassdoor</strong> forbid robots and scrapers</td><td>Official partner routes or nothing. No scraping.</td></tr>
+            <tr><td><strong>EU Database Directive</strong> protects listings against substantial extraction</td><td>Ingest through APIs and feeds we are permitted to use; never bulk-extract a board's database.</td></tr>
+            <tr><td><strong>GDPR</strong> — we are a controller, often jointly with the candidate</td><td>Explicit consent before processing a CV; documented lawful basis; access, erasure and portability built as product features, not support tickets.</td></tr>
+            <tr><td><strong>GDPR Article 9</strong> — CVs can carry health, union or religious data</td><td>Never required, never inferred, never used for matching. Flagged and excluded at parse time.</td></tr>
+            <tr><td><strong>Third parties named in a CV</strong> — referees, managers</td><td>Transparency obligation; we store the document and process no referee data beyond it.</td></tr>
+            <tr><td><strong>EU AI Act</strong> — employer-side hiring AI is high-risk; candidate-side tools are not restricted by it</td><td>We are candidate-side. Say so plainly, and never market as a hiring-decision system.</td></tr>
+            <tr><td><strong>India DPDP Act · CCPA</strong></td><td>Same rights surface, region-aware retention.</td></tr>
+            <tr><td><strong>Fraud</strong> — knowingly false statements in an application</td><td>The honesty principles are the compliance control. A platform that writes claims for a user manufactures this risk; we architecturally cannot.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Retention, erasure, and a real conflict inside this document</h3>
+      <p>FR-20 says every send is archived and never overwritten. FR-25 and FR-26 say a
+        candidate can take their data and erase their account. Both are correct and they
+        collide — so the resolution belongs here, not in a bug report six months from now.</p>
+      <div class="cols">
+        <div class="col">
+          <h3>Erasure wins</h3>
+          <p>Deleting an account deletes the archives with it. The archive serves the
+            candidate's own memory of what they sent; it is not a compliance record we are
+            obliged to keep, and there is no lawful basis for holding a CV after consent is
+            withdrawn.</p>
+        </div>
+        <div class="col">
+          <h3>Immutability holds while the account lives</h3>
+          <p>"Written once" is a rule about our code never rewriting history — not a claim
+            that the candidate cannot end it.</p>
+        </div>
+        <div class="col">
+          <h3>Default retention: 24 months</h3>
+          <p>From the send, then automatic deletion, shortenable by the candidate. An
+            application older than two years is history, not a live thread.</p>
+        </div>
+      </div>
+
+      <div class="call">
+        <span class="lbl">Position</span>
+        <p>Landfall's default is assisted, not unattended, because the default destination's
+          terms say so. Volume comes from removing the typing, not from removing the human.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s9">
+    <div class="sec-h"><span class="num">09</span><h2>Architecture — static front end, sandboxed executor</h2></div>
+    <div class="stack">
+<pre class="arch"><b>ingest/</b>     ATS and board adapters · schema probes · live index
+<b>profile/</b>    structured facts · variants · résumé files · parse + confidence
+<b>plan/</b>       deterministic fill-plan compiler — no browser, no model
+<b>compose/</b>    bullet selection · integrity check · starters (thin model edge)
+<b>execute/</b>    Tier A extension · Tier B sandboxed browser · Tier C allowlisted
+<b>record/</b>     tracker · sent-bytes archive · hashes · follow-ups
+<b>trust/</b>      consent · retention · erasure · region routing · rate limits</pre>
+      <p>Phase 0's TypeScript adapters, schema probes and fill-plan compiler port straight
+        into <code>ingest/</code> and <code>plan/</code> — roughly a third of v0 already
+        built and measured.</p>
+
+      <h3>The front end is static, and that is a decision</h3>
+      <p>The candidate-facing app ships as static assets behind a CDN, talking to a
+        regional API. No server-side rendering.</p>
+      <div class="cols">
+        <div class="col">
+          <h3>It is a tool, not a content site</h3>
+          <p>SEO is irrelevant behind a login, so rendering on the server buys nothing and
+            costs a tier. Marketing pages are a separate static site, indexed properly.</p>
+        </div>
+        <div class="col">
+          <h3>Data residency gets easier</h3>
+          <p>Assets are global; API and database are regional. An EU candidate's data never
+            leaves the EU because their API origin never does.</p>
+        </div>
+        <div class="col">
+          <h3>The cost, stated honestly</h3>
+          <p>Search and the index must be real API endpoints rather than rendered pages,
+            and first paint needs a genuinely useful empty state instead of a spinner.</p>
+        </div>
+      </div>
+
+      <h3>The executor is sandboxed, per session, and disposable</h3>
+      <p>Anything that drives a browser runs in a <strong>one-shot container</strong>:
+        created for a single application run, destroyed after it. No shared cookie jar, no
+        shared profile, no browser state reused between candidates.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th></th><th>Tier A — assisted</th><th>Tier B — supervised</th><th>Tier C — unattended</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Runs in</strong></td><td>The candidate's own browser, via extension</td><td>Sandboxed container, one per run</td><td>Sandboxed container, one per run</td></tr>
+            <tr><td><strong>Network identity</strong></td><td>Their IP, their session</td><td>Regional egress, honest UA, rate-limited</td><td>Same, plus allowlist</td></tr>
+            <tr><td><strong>Candidate sees</strong></td><td>Their own form, filled</td><td>Live view, one confirm before submit</td><td>Nothing live; full recording after</td></tr>
+            <tr><td><strong>Credentials</strong></td><td>Never leave their machine</td><td>Injected per run, never persisted</td><td>Injected per run, never persisted</td></tr>
+            <tr><td><strong>Allowed where</strong></td><td>Everywhere</td><td>Where terms permit</td><td>Allowlist only — ships empty</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="call">
+        <span class="lbl">Why sandboxing is a requirement, not an optimisation</span>
+        <p><strong>Credential containment.</strong> Tier B may hold an ATS login for the
+          length of one run; a long-lived shared profile would pool candidates' sessions in
+          one process — one bug away from a cross-candidate leak.</p>
+        <p><strong>Hostile-page containment.</strong> We load employer pages we do not
+          control, running their scripts. That belongs in a disposable container, not next
+          to the API.</p>
+        <p><strong>Honest network identity.</strong> One egress per region with a truthful
+          User-Agent is a fixed, inspectable footprint. A rotating residential proxy pool is
+          what an evasion product looks like — and principle 3 rules it out anyway.</p>
+        <p><strong>Failure isolation.</strong> A hung browser kills its own container and
+          one application, never a queue.</p>
+      </div>
+
+      <div class="figs">
+        <div class="fig"><span class="v">60–180s</span><span class="k">One vCPU and ~1.5 GB per application run</span></div>
+        <div class="fig"><span class="v hot">~$0.005</span><span class="k">Compute per application — not the constraint</span></div>
+        <div class="fig"><span class="v">per ATS</span><span class="k">Runtime form discovery must be written and maintained separately — this is the real v1 budget line</span></div>
+        <div class="fig"><span class="v hot">63.6%</span><span class="k">Of every form resolves before a container is ever started</span></div>
+      </div>
+
+      <p>The plan compiler, matching, tailoring and the integrity check stay outside the
+        sandbox entirely — pure functions over stored facts, no browser, no network. That is
+        why most applications never need a container at all.</p>
+    </div>
+  </section>
+
+  <section id="s10">
+    <div class="sec-h"><span class="num">10</span><h2>Success metrics</h2></div>
+    <div class="stack">
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Metric</th><th>Target at v0 exit</th></tr></thead>
+          <tbody>
+            <tr><td>Deterministic field coverage — no model, no human</td><td class="n">≥ 60%</td></tr>
+            <tr><td>Applications prepared per candidate-hour</td><td class="n">≥ 12 (vs ~4 manual)</td></tr>
+            <tr><td>Fabricated-claim incidents</td><td class="n">0 — enforced, then audited</td></tr>
+            <tr><td>Bot-wall evasion incidents</td><td class="n">0</td></tr>
+            <tr><td>Assisted-apply completion — prepared to submitted</td><td class="n">≥ 70%</td></tr>
+            <tr><td>Median time from finding a role to submitting</td><td class="n">&lt; 4 min</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="call stop">
+        <span class="lbl">Deliberately not a metric</span>
+        <p>Applications submitted per day. That number is what produces spam, and every
+          product in section 1 optimises for it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s11">
+    <div class="sec-h"><span class="num">11</span><h2>Risks</h2></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Risk</th><th>Likelihood</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>A destination bans automated traffic outright</td><td class="n">High</td><td>Tier A works within their terms; tiering is per-destination config, not code</td></tr>
+          <tr><td>Workday and SuccessFactors never expose schemas</td><td class="n">Certain</td><td>Runtime discovery is budgeted v1 scope, not a surprise</td></tr>
+          <tr><td>Résumé parsing quality disappoints</td><td class="n">Medium</td><td>Confidence scores and a mandatory correction step; parsing pre-fills, never decides</td></tr>
+          <tr><td>Candidates expect "1,000 applications while I sleep"</td><td class="n">High</td><td>Position honestly from the first screen; Tier C stays narrow and visibly so</td></tr>
+          <tr><td>Regional board partnerships move slowly</td><td class="n">Medium</td><td>v0 ships Greenhouse-only; partnership work starts now, in parallel</td></tr>
+          <tr><td>Model cost creep</td><td class="n">Medium</td><td>91.1% of instances need no model; enforce with a per-application budget alarm</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="s12">
+    <div class="sec-h"><span class="num">12</span><h2>The name, checked rather than guessed</h2></div>
+    <div class="stack">
+      <p><strong>Landfall</strong> — the first sight of land after a long crossing. That is
+        what the end of a job search actually feels like, and the metaphor keeps working as
+        the product grows past auto-apply. It also spells itself by ear in every launch
+        market, which the runner-up does not.</p>
+      <p>Availability verified against RDAP, the authoritative registry protocol,
+        on 15 September 2026.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Candidate</th><th>Domains</th><th>Conflicts in trade class</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><s>Meridian</s></td>
+              <td><code>.com</code> (1997), <code>.ai</code>, <code>.jobs</code>, <code>.work</code>, <code>.careers</code> and every use/try/join/get prefix — all taken; <code>.work</code> and <code>.careers</code> registered February 2026</td>
+              <td>—</td>
+              <td><strong>Dropped.</strong> Contested inside our own category</td>
+            </tr>
+            <tr>
+              <td><s>Kestrel</s></td>
+              <td><code>kestrelapply.com</code>, <code>applykestrel.com</code>, <code>kestrel.jobs</code> free</td>
+              <td>Kestrel Recruitment (UK) · Kestrel Recruitment (AU)</td>
+              <td><strong>Dropped.</strong> Same trade class</td>
+            </tr>
+            <tr>
+              <td><s>Sextant</s></td>
+              <td><code>sextantapply.com</code>, <code>applysextant.com</code>, <code>sextant.jobs</code> free</td>
+              <td>Sextant Consulting Group runs recruitment practices</td>
+              <td><strong>Dropped.</strong> Same class — and read the first syllable aloud before shipping it to India or the Gulf</td>
+            </tr>
+            <tr>
+              <td><strong>Landfall</strong></td>
+              <td><strong><code>landfalljobs.com</code> and <code>landfall.jobs</code> free</strong></td>
+              <td>None found</td>
+              <td><strong>Recommended</strong></td>
+            </tr>
+            <tr>
+              <td>Azimuth</td>
+              <td><code>azimuthapply.com</code>, <code>azimuth.jobs</code> free</td>
+              <td>None found</td>
+              <td>Runner-up</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="call stop">
+        <span class="lbl">Still outstanding</span>
+        <p><code>.jobs</code> is a <strong>restricted TLD</strong> whose eligibility rules
+          have not been verified — plan on <code>landfalljobs.com</code> as the real
+          address. And a domain check plus a web search is <strong>not trademark
+          clearance</strong>: an official register search in each launch country, by a
+          lawyer, comes before any branding spend.</p>
+      </div>
+      <p><span class="lbl">Known mark against it</span> In US and Indian press, "landfall"
+        is also what a cyclone makes. Weigh that against a name people can spell after
+        hearing it once.</p>
+    </div>
+  </section>
+
+  <section id="s13">
+    <div class="sec-h"><span class="num">13</span><h2>Decisions needed before build starts</h2></div>
+    <div class="stack-tight">
+      <div class="dec"><span class="num">01</span><div>
+        <h3>Business model</h3>
+        <p>Free tier plus subscription, or credits charged only on successful submission?
+          LiftmyCV sits at $9.99–$69.99 and charges nothing when a CAPTCHA blocks it. This
+          shapes the schema and the whole execute path.</p></div></div>
+      <div class="dec"><span class="num">02</span><div>
+        <h3>Launch region</h3>
+        <p>India-first — which makes Naukri a v0 integration rather than v1 — or
+          global-English-first on Greenhouse, as scoped above?</p></div></div>
+      <div class="dec"><span class="num">03</span><div>
+        <h3>Tier C at all</h3>
+        <p>Recommendation: build the allowlist mechanism in v0, ship it empty, and decide
+          with real data rather than in advance.</p></div></div>
+      <div class="dec"><span class="num">04</span><div>
+        <h3>Résumé parsing — build or buy</h3>
+        <p>Buying an extraction API is faster and puts candidate CVs through a third party,
+          which section 8 then has to account for.</p></div></div>
+    </div>
+  </section>
+
+  <section id="s14">
+    <div class="sec-h"><span class="num">14</span><h2>Technology</h2></div>
+    <div class="stack">
+      <p><strong>TypeScript on both ends.</strong> Not a preference — close to forced by
+        what already exists.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Layer</th><th>Choice</th><th>Why this one</th></tr></thead>
+          <tbody>
+            <tr><td>Front end</td><td class="n">TypeScript · React · Vite</td><td>Static build to a CDN, which section 9 commits to. Familiar from guidetrack, so the concepts port</td></tr>
+            <tr><td>API</td><td class="n">TypeScript on Node · Fastify or Hono</td><td>Phase 0's adapters, schema probes, plan compiler and integrity check are already TypeScript</td></tr>
+            <tr><td>Executor</td><td class="n">Node · Playwright</td><td>Playwright's first-class language is Node, and the 60-fixture harness is already written against it</td></tr>
+            <tr><td>Database</td><td class="n">Postgres · Prisma</td><td>The same stack already deployed once on guidetrack</td></tr>
+            <tr><td>Queue</td><td class="n">pg-boss</td><td>One datastore rather than two, until volume argues otherwise</td></tr>
+            <tr><td>Styling</td><td class="n">Tailwind</td><td>Fast, and the design tokens stay in one place</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="call">
+        <span class="lbl">The decisive argument</span>
+        <p>Rewriting Phase 0 in Python or Go discards the only part of this product that has
+          been measured — 541 postings, 565 fill actions, zero failures. The types in
+          <code>plan/</code> and <code>ingest/</code> <em>are</em> the specification.
+          Porting them means re-deriving that for no gain.</p>
+      </div>
+
+      <div class="cols">
+        <div class="col">
+          <h3>One honest exception</h3>
+          <p>If decision 4 goes toward <em>building</em> résumé parsing rather than buying
+            it, Python wins on merit — <code>pdfplumber</code>, <code>spaCy</code> and the
+            extraction ecosystem live there. That is one service behind an HTTP boundary,
+            not a second language through the codebase.</p>
+        </div>
+        <div class="col">
+          <h3>Deliberately not used</h3>
+          <p>Next.js. Section 9 rules out server-side rendering, so running it purely for a
+            static export carries a render framework we have decided not to use. Vite does
+            that job with less.</p>
+        </div>
+      </div>
+
+      <h3>Hosting shape, per region</h3>
+      <p>Data residency (NFR-4) is the constraint that decides the topology.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Tier</th><th>Deployment</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Static assets</td><td class="n">One global CDN</td><td>They carry no candidate data, so there is no residency question</td></tr>
+            <tr><td>API + Postgres</td><td class="n">Per region — EU, US, India</td><td>A candidate's origin is regional, so their data never crosses a border it should not</td></tr>
+            <tr><td>Executor containers</td><td class="n">Per region, pooled, one-shot</td><td>Regional egress gives each region one honest, inspectable IP footprint (NFR-1)</td></tr>
+            <tr><td>Object storage</td><td class="n">Per region</td><td>Résumé files and send archives live beside their region's database</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Adding a country means adding a region, not re-architecting. That is the whole
+        reason for keeping rendering out of the server tier.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span class="lbl">Sources</span>
+    <p class="srcs">
+      Market scan —
+      <a href="https://www.liftmycv.com/pricing/">LiftmyCV pricing</a> ·
+      <a href="https://simplify.jobs/copilot">Simplify Copilot</a> ·
+      <a href="https://www.loopcv.pro/">LoopCV</a> ·
+      <a href="https://www.tealhq.com/tools/autofill-job-applications">Teal</a> ·
+      <a href="https://aiapply.co/">AIApply</a> ·
+      <a href="https://fastapply.co/us">FastApply</a> ·
+      <a href="https://www.resumly.ai/">Resumly</a><br>
+      Legal —
+      <a href="https://www.loopcv.pro/guides/is-it-legal-to-automate-job-applications/">Is automating applications legal</a> ·
+      <a href="https://takemeup.cv/en/guides/is-auto-apply-to-jobs-legal-eu">EU auto-apply guide</a> ·
+      <a href="https://jobapplyai.in/blog/is-auto-applying-linkedin-jobs-against-tos/">LinkedIn ToS analysis</a><br>
+      Market share —
+      <a href="https://resumegeni.com/research/ats-market-share-2026">ATS market share 2026</a> ·
+      <a href="https://www.jobscan.co/blog/fortune-500-use-applicant-tracking-systems/">Jobscan ATS usage report</a> ·
+      <a href="https://bestjobsearchapps.com/articles/en/best-job-sites-in-india-2026-top-picks-naukri-vs-linkedin-vs-indeed-and-complete-guide">Naukri market position</a><br>
+      Internal — <code>autoapply</code> Phase 0 README and DECISIONS, 10 September 2026.
+    </p>
+  </footer>
+
+</div>

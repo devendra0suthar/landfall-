@@ -3,15 +3,26 @@
 A worldwide job-application platform. Requirements: `docs/REQUIREMENTS.md`.
 Interactive prototype of the four screens: `design/Main.dc.html`.
 
+**Posture C+, 22 Sep 2026: Landfall fills; the candidate submits.** The extension
+fills the employer's own form in the candidate's own browser (FR-15) and stops.
+Our servers never file an application, and Tiers B and C — cloud submission,
+attended or not — stay retired. The decision record and its competitive research
+are in `docs/PROJECT.md`, which amends the spec — read both.
+
 ## Layout
 
 ```
 api/       Fastify + Prisma. Ingest adapters, plan compiler, records.
 web/       Vite + React, static build. Talks to the API, renders nothing server-side.
-extension/ Tier A. Fills the employer's own form. Contains no submit path, and
-           a test enforces that by absence — see extension/test/no-submit.test.ts.
-docs/   REQUIREMENTS.md is the spec. Numbered FR-/NFR- ids are referenced in code.
-design/ The prototype canvas (Design Components format).
+extension/ Tier A autofill, restored 22 Sep 2026 (FR-15). Fills the employer's
+           own form in the candidate's session; contains no submit path, and a
+           test enforces that by absence — extension/test/no-submit.test.ts.
+           Keep that test whatever else changes. `pnpm build:extension`, then
+           load extension/dist/ unpacked.
+docs/   REQUIREMENTS.md is the spec; PROJECT.md amends it and wins where they
+        disagree. Numbered FR-/NFR- ids are referenced in code — retired ids keep
+        their numbers and are never reused.
+design/ The prototype canvas (Design Components format). Predates posture C.
 ```
 
 ## Rules that are not style preferences
@@ -23,15 +34,24 @@ one is wrong even when it passes review on every other axis.
    orders bullets they wrote. Any code path that edits bullet text is a bug.
 2. **Never auto-answer an attestation, consent or demographic question.** There
    is no column for one in `schema.prisma`; keep it that way.
-3. **Never evade a bot wall.** CAPTCHA, rate limit or login wall ends the run
-   and hands the session back. No solving services, no proxy rotation, no
-   fingerprint spoofing.
-4. **Submission is allowlisted.** `Board.submitAllowed` ships false. Reading is
-   unrestricted; submitting is not.
-5. **Archive what was sent, once.** `SentRecord` is written on the first
+3. **Never evade a bot wall.** CAPTCHA, rate limit or login wall stops the read.
+   No solving services, no proxy rotation, no fingerprint spoofing.
+4. **Never submit. Fill only in their own browser.** The extension fills the
+   employer's form in the candidate's own session and stops (FR-15); the submit
+   button is theirs. Landfall's servers never file an application. Any code path
+   that submits — or that fills from our infrastructure rather than their
+   browser — is wrong. `extension/test/no-submit.test.ts` enforces the first half
+   by absence; keep it.
+5. **Archive what was handed over, once.** `SentRecord` is written on the first
    transition into APPLIED and never updated — but it is deleted with the
    candidate, because erasure wins over immutability.
-6. **`submitted` is not `confirmed`.** Only external evidence changes that.
+6. **`submitted` is not `confirmed`.** `submitted` comes from the candidate's own
+   mark; only external evidence makes it `confirmed`. Nothing advances either on
+   its own.
+7. **A Kit states what it does not know.** Presenting an unread form as having no
+   questions, or an unresolved field as resolved, is the worst bug this product
+   can ship — it sends someone into an interview unprepared while telling them
+   they are ready.
 
 ## Conventions
 

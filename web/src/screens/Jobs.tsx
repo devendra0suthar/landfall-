@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
-import type { JobRow } from '../api.js';
+import type { JobRow, ResumeList } from '../api.js';
 
 /**
  * The index.
@@ -13,7 +13,7 @@ import type { JobRow } from '../api.js';
  * Sorted by match, because that is the question a candidate is actually asking
  * of a list this long. Readiness is not computed per row — it needs the form
  * compiled, which is a per-posting cost — so the list carries the form's state
- * and the prepare screen carries the number.
+ * and the kit screen carries the number.
  */
 
 export function Jobs(): React.ReactElement {
@@ -21,26 +21,60 @@ export function Jobs(): React.ReactElement {
   const [days, setDays] = useState('');
   const [formOnly, setFormOnly] = useState(false);
 
-  const q = new URLSearchParams({ limit: '60' });
+  const PAGE = 60;
+  const [offset, setOffset] = useState(0);
+  const [loaded, setLoaded] = useState<JobRow[]>([]);
+
+  const q = new URLSearchParams({ limit: String(PAGE), offset: String(offset) });
   if (country) q.set('country', country);
   if (days) q.set('postedWithinDays', days);
   if (formOnly) q.set('formReadable', 'true');
 
   const { data, error, loading } = useAsync(
-    () => api<{ count: number; scored: boolean; rows: JobRow[] }>(`/api/jobs?${q.toString()}`),
-    [country, days, formOnly],
+    () => api<{
+      count: number; total: number; offset: number; hasMore: boolean;
+      scored: boolean; rows: JobRow[];
+    }>(`/api/jobs?${q.toString()}`),
+    [country, days, formOnly, offset],
   );
 
-  // Sorting by match is only meaningful once there is a profile to match
-  // against. Without one the API sends null and the column says so.
-  const rows = [...(data?.rows ?? [])].sort((x, y) => (y.match?.score ?? 0) - (x.match?.score ?? 0));
+  // A filter change is a new result set, not more of the old one.
+  useEffect(() => { setOffset(0); setLoaded([]); }, [country, days, formOnly]);
+
+  useEffect(() => {
+    if (!data) return;
+    setLoaded((prev) => (data.offset === 0 ? data.rows : [...prev, ...data.rows]));
+  }, [data]);
+
+  /**
+   * Whether there is a résumé at all.
+   *
+   * Asked here, on the first screen anyone sees, because the alternative is
+   * what this product shipped with: a candidate browses and prepares
+   * applications for days without ever being told that the one field every form
+   * asks for is empty. A banner on the list is the cheapest possible fix.
+   */
+  const resumes = useAsync(() => api<ResumeList>('/api/resumes'), []);
+  const noResume = resumes.data !== null && resumes.data.count === 0;
+
+  /**
+   * Sorting by match is only meaningful once there is a profile to match
+   * against. Without one the API sends null and the column says so.
+   *
+   * Sorted over everything loaded so far, not per page: sorting each page
+   * separately would put a 70 from page two below a 20 from page one, which
+   * looks like the ranking is broken.
+   */
+  const rows = [...loaded].sort((x, y) => (y.match?.score ?? 0) - (x.match?.score ?? 0));
 
   return (
     <>
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="lbl">Live index</span>
-          <h1>{data ? `${data.count} open roles` : 'Jobs'}</h1>
+          {/* The total matching the filter, not the size of the page. The old
+              header read "60 open roles" whether the filter matched 60 or 2,400. */}
+          <h1>{data ? `${data.total.toLocaleString()} open roles` : 'Jobs'}</h1>
         </div>
         <div className="filters">
           <select value={country} onChange={(e) => setCountry(e.target.value)} aria-label="Country">
@@ -69,6 +103,22 @@ export function Jobs(): React.ReactElement {
       </div>
 
       <div className="body">
+        {noResume && (
+          <div className="note warn">
+            <span className="lbl">Start with your résumé</span>
+            <p>
+              There is no résumé on file. Every form in the sample asks for one, so until you
+              upload it the attachment field on every application stays empty — and the match
+              scores below are based only on skills typed in by hand.
+            </p>
+            <p className="sub">
+              Uploading also lets Landfall read your roles, dates and bullets into your profile,
+              which is what every tailored résumé is then selected from.
+            </p>
+            <a className="btn p" href="#/resume">Upload my résumé →</a>
+          </div>
+        )}
+
         <div className="note">
           <span className="lbl">Two scores, never averaged</span>
           <p className="sub">
@@ -84,12 +134,36 @@ export function Jobs(): React.ReactElement {
             <span className="lbl">Role · sorted by match</span>
             <span className="lbl">Match · form</span>
           </header>
-          <State loading={loading} error={error} empty={data?.rows.length === 0}>
+          {/* Only the first page gets the skeleton. Once rows are on screen a
+              "load more" must not blank them out and move everything. */}
+          <State
+            loading={loading && rows.length === 0}
+            error={error}
+            empty={!loading && rows.length === 0}
+            rows={8}
+          >
             <div className="rows">
               {rows.map((r) => <JobLine key={r.id} job={r} />)}
             </div>
           </State>
         </div>
+
+        {data && rows.length > 0 && (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
+            <span className="sub">
+              Showing {rows.length.toLocaleString()} of {data.total.toLocaleString()}
+            </span>
+            {data.hasMore && (
+              <button
+                className="btn"
+                disabled={loading}
+                onClick={() => setOffset(rows.length)}
+              >
+                {loading ? 'Loading…' : `Load ${Math.min(PAGE, data.total - rows.length)} more`}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
@@ -117,15 +191,25 @@ function JobLine({ job }: { job: JobRow }): React.ReactElement {
           </span>
         )}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {job.match ? (
           <>
-            <span style={{
+            <span className="num" style={{
               fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700,
               fontSize: '1.3rem', lineHeight: 1,
               color: job.match.score >= 60 ? 'var(--good)' : job.match.score >= 35 ? 'var(--warn)' : 'var(--ink-muted)',
             }}>
               {job.match.score}
+            </span>
+            {/* Redundant encoding, not a replacement: two bar lengths compare
+                at a glance down a long list where two numbers do not, and the
+                number stays for anyone the colour or length fails. */}
+            <span
+              className={`meter ${job.match.score >= 60 ? 'good' : job.match.score >= 35 ? 'warn' : 'low'}`}
+              role="img"
+              aria-label={`match ${job.match.score} of 100`}
+            >
+              <span style={{ width: `${Math.max(2, Math.min(100, job.match.score))}%` }} />
             </span>
             <span className="lbl">{job.match.confidence} confidence</span>
           </>
@@ -134,8 +218,8 @@ function JobLine({ job }: { job: JobRow }): React.ReactElement {
         )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>{form}</div>
-      <a className="btn p" href={`#/prepare/${job.id}`} style={{ textDecoration: 'none' }}>
-        Prepare
+      <a className="btn p" href={`#/kit/${job.id}`} style={{ textDecoration: 'none' }}>
+        Get the kit
       </a>
     </div>
   );

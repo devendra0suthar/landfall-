@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Jobs } from './screens/Jobs.js';
-import { Prepare } from './screens/Prepare.js';
+import { Kit } from './screens/Kit.js';
+import { Resume } from './screens/Resume.js';
 import { Tracker } from './screens/Tracker.js';
 import { Profile } from './screens/Profile.js';
 import { Gaps } from './screens/Gaps.js';
@@ -10,14 +11,20 @@ import { Aim } from './Aim.js';
 /**
  * The shell, and the router.
  *
- * Hash routing, by hand. The app has five screens and one nested route; a
+ * Hash routing, by hand. The app has six screens and two nested routes; a
  * router library would be more code to load than to write, and this keeps the
  * static build free of a dependency that only earns its place at ten screens.
+ *
+ * `kit` is the apply view. `prepare` was folded into it — the two rendered the
+ * same deliverable and had begun to disagree about how to report a form we
+ * could not read. `#/prepare/:id` still resolves, to `kit`, because links to it
+ * exist in the tracker and in people's history.
  */
 
 type Route =
   | { name: 'jobs' }
-  | { name: 'prepare'; jobId: string }
+  | { name: 'kit'; jobId: string }
+  | { name: 'resume' }
   | { name: 'tracker'; appId?: string }
   | { name: 'gaps' }
   | { name: 'profile' }
@@ -26,8 +33,12 @@ type Route =
 function parse(hash: string): Route {
   const path = hash.replace(/^#\/?/, '');
   const [head, id] = path.split('/');
-  if (head === 'prepare' && id) return { name: 'prepare', jobId: id };
+  if (head === 'kit' && id) return { name: 'kit', jobId: id };
+  // Old links keep working rather than dumping someone on the job list with no
+  // explanation of why the page they bookmarked is gone.
+  if (head === 'prepare' && id) return { name: 'kit', jobId: id };
   if (head === 'tracker') return id ? { name: 'tracker', appId: id } : { name: 'tracker' };
+  if (head === 'resume') return { name: 'resume' };
   if (head === 'gaps') return { name: 'gaps' };
   if (head === 'parse') return { name: 'parse' };
   if (head === 'profile') return { name: 'profile' };
@@ -53,11 +64,12 @@ export function App(): React.ReactElement {
         <nav className="nav">
           <a href="#/jobs" className={route.name === 'jobs' ? 'on' : ''}>Jobs</a>
           <a
-            href={route.name === 'prepare' ? `#/prepare/${route.jobId}` : '#/jobs'}
-            className={route.name === 'prepare' ? 'on' : ''}
+            href={route.name === 'kit' ? `#/kit/${route.jobId}` : '#/jobs'}
+            className={route.name === 'kit' ? 'on' : ''}
           >
-            Prepare
+            Kit
           </a>
+          <a href="#/resume" className={route.name === 'resume' ? 'on' : ''}>Résumé</a>
           <a href="#/tracker" className={route.name === 'tracker' ? 'on' : ''}>Tracker</a>
           <a href="#/gaps" className={route.name === 'gaps' ? 'on' : ''}>Gaps</a>
           <a href="#/profile" className={route.name === 'profile' ? 'on' : ''}>Profile</a>
@@ -73,7 +85,8 @@ export function App(): React.ReactElement {
 
       <main className="main">
         {route.name === 'jobs' && <Jobs />}
-        {route.name === 'prepare' && <Prepare jobId={route.jobId} />}
+        {route.name === 'kit' && <Kit jobId={route.jobId} />}
+        {route.name === 'resume' && <Resume />}
         {route.name === 'tracker' && <Tracker appId={route.appId} />}
         {route.name === 'gaps' && <Gaps />}
         {route.name === 'profile' && <Profile />}
@@ -111,10 +124,27 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): {
   return { data, error, loading, reload: () => setNonce((n) => n + 1) };
 }
 
-export function State({ loading, error, empty, children }: {
-  loading: boolean; error: string | null; empty?: boolean; children: React.ReactNode;
+export function State({ loading, error, empty, rows = 4, children }: {
+  loading: boolean; error: string | null; empty?: boolean;
+  /** How many placeholder rows to stand in for what is coming. */
+  rows?: number;
+  children: React.ReactNode;
 }): React.ReactElement {
-  if (loading) return <p className="empty">Loading…</p>;
+  if (loading) {
+    // Shaped like the rows it replaces, so the layout does not jump when the
+    // data lands, and so the wait tells you what is arriving.
+    return (
+      <div className="skeleton" aria-busy="true" aria-live="polite">
+        <span className="lbl" style={{ position: 'absolute', left: -9999 }}>Loading</span>
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i}>
+            <span className="ln w2" />
+            <span className="ln w1" />
+          </div>
+        ))}
+      </div>
+    );
+  }
   if (error) {
     return (
       <div className="note bad">

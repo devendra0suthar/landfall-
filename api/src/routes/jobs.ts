@@ -21,6 +21,12 @@ const Query = z.object({
   postedWithinDays: z.coerce.number().int().positive().max(365).optional(),
   formReadable: z.enum(['true', 'false']).optional(),
   limit: z.coerce.number().int().positive().max(200).default(50),
+  /**
+   * Where to start. The index is bigger than one page and was previously
+   * unreachable past the first 200 rows — with no way to page, "260 open roles"
+   * was a number you could read but not get to.
+   */
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
@@ -38,24 +44,41 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
     const candidate = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
     const profile = candidate ? await loadProfile(candidate.id) : null;
 
-    const jobs = await prisma.job.findMany({
-      where: {
-        ...(q.country ? { country: q.country } : {}),
-        ...(q.remote ? { remote: q.remote === 'true' } : {}),
-        ...(q.formReadable ? { formReadable: q.formReadable === 'true' } : {}),
-        ...(since ? { postedAt: { gte: since } } : {}),
-        board: { disabled: false },
-      },
-      orderBy: [{ postedAt: 'desc' }, { fetchedAt: 'desc' }],
-      take: q.limit,
-      include: {
-        board: { select: { vendor: true, slug: true } },
-        _count: { select: { questions: true } },
-      },
-    });
+    const where = {
+      ...(q.country ? { country: q.country } : {}),
+      ...(q.remote ? { remote: q.remote === 'true' } : {}),
+      ...(q.formReadable ? { formReadable: q.formReadable === 'true' } : {}),
+      ...(since ? { postedAt: { gte: since } } : {}),
+      board: { disabled: false },
+    };
+
+    // Counted separately from the page, because `count` used to be
+    // `jobs.length` — the size of the page, not of the result. A filter that
+    // matched 900 roles and a filter that matched 50 both reported "50" at the
+    // default limit, so the number on screen told a candidate nothing about
+    // how much they had not seen.
+    const [total, jobs] = await Promise.all([
+      prisma.job.count({ where }),
+      prisma.job.findMany({
+        where,
+        orderBy: [{ postedAt: 'desc' }, { fetchedAt: 'desc' }],
+        skip: q.offset,
+        take: q.limit,
+        include: {
+          board: { select: { vendor: true, slug: true } },
+          _count: { select: { questions: true } },
+        },
+      }),
+    ]);
 
     return {
+      /** Rows on this page. */
       count: jobs.length,
+      /** Rows matching the filter, of which this page is a slice. */
+      total,
+      offset: q.offset,
+      limit: q.limit,
+      hasMore: q.offset + jobs.length < total,
       // Match needs a profile to compare against. With none, every row says so
       // rather than showing a zero that reads like "bad fit".
       scored: profile !== null,

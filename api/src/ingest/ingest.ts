@@ -135,13 +135,28 @@ async function writeJob(
 
   if (!Array.isArray(posting.questions)) return { formRead: false, questionCount: 0 };
 
-  // The form schema is replaced wholesale rather than merged: a question the
-  // employer removed must disappear here too, or a plan compiled tomorrow fills
-  // a field that no longer exists.
-  await prisma.question.deleteMany({ where: { jobId: job.id } });
+  const questionCount = await storeQuestions(job.id, posting.questions);
+  return { formRead: true, questionCount };
+}
+
+/**
+ * Replace a posting's stored form schema.
+ *
+ * Wholesale rather than merged: a question the employer removed must disappear
+ * here too, or a plan compiled tomorrow fills a field that no longer exists.
+ *
+ * Exported so the backfill writes forms through exactly this path. Two copies
+ * of "how a question is stored" would drift, and the drift would show up as a
+ * plan that fills one posting correctly and its neighbour wrongly.
+ */
+export async function storeQuestions(
+  jobId: string,
+  questions: NonNullable<JobPosting['questions']>,
+): Promise<number> {
+  await prisma.question.deleteMany({ where: { jobId } });
   await prisma.question.createMany({
-    data: posting.questions.map((q, i) => ({
-      jobId: job.id,
+    data: questions.map((q, i) => ({
+      jobId,
       fieldName: q.fields[0]?.name ?? q.label,
       label: q.label,
       labelKey: q.labelKey,
@@ -152,8 +167,7 @@ async function writeJob(
       position: i,
     })),
   });
-
-  return { formRead: true, questionCount: posting.questions.length };
+  return questions.length;
 }
 
 /**

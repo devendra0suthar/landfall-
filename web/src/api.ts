@@ -88,6 +88,68 @@ export interface Plan {
   actions?: PlanAction[];
 }
 
+/* ── the Application Kit (FR-39 … FR-43) ── */
+
+/**
+ * Three states, never two. `unread` is our gap; `unpublished` is the vendor's.
+ * The candidate is owed the difference, so the UI never collapses them.
+ */
+export type KitFormState = 'readable' | 'unread' | 'unpublished';
+
+export interface KitQuestion {
+  label: string;
+  /** Null for a question we expect but did not read from this form. */
+  fieldName: string | null;
+  required: boolean;
+  source: PlanAction['source'];
+  value: string | null;
+  reason: string | null;
+  /** False ⇒ this is a question that recurs elsewhere, not one of theirs. */
+  read: boolean;
+}
+
+export interface ApplicationKit {
+  job: { id: string; title: string; company: string; location: string | null; url: string };
+  form: {
+    state: KitFormState;
+    /** Rendered verbatim — the honest phrasing lives on the server, not per screen. */
+    statement: string;
+    /** Null when unknown. Never zero. */
+    fields: number | null;
+    stated: number;
+    /** Null whenever `fields` is null: a ratio with an unknown total is a guess. */
+    coverage: number | null;
+    skippedOptionalBlank: number;
+  };
+  answers: KitQuestion[];
+  yours: KitQuestion[];
+  openItems: KitQuestion[];
+  resume: {
+    integrityOk: boolean;
+    bulletsKept: number;
+    bulletsAvailable: number;
+    asked: string[];
+    evidenced: string[];
+    claimedNotShown: string[];
+    missing: string[];
+    /** The evidence for the integrity claim: what was kept, what was dropped, and why. */
+    roles: Array<{
+      title: string; company: string; start: string; end: string | null;
+      location: string | null;
+      kept: TailoredBullet[]; dropped: TailoredBullet[];
+    }>;
+  };
+  letter: {
+    text: string;
+    grounded: number;
+    yours: number;
+    wouldHelp: string[];
+    facts: Array<{ field: string; value: string; source: 'profile' | 'posting' }>;
+    missingContext: string[];
+  };
+  counts: { prepared: number; yours: number; open: number };
+}
+
 export interface TailoredBullet { text: string; score: number; matched: string[] }
 
 export interface Tailored {
@@ -138,6 +200,18 @@ export interface ParseResponse {
     warnings: string[];
   };
 }
+
+export interface ResumeRow {
+  id: string;
+  filename: string;
+  bytes: number;
+  sha256: string;
+  uploadedAt: string;
+  /** Exactly one is true (FR-4) — the file every application attaches. */
+  active: boolean;
+}
+
+export interface ResumeList { count: number; rows: ResumeRow[] }
 
 export interface GapRow {
   labelKey: string;

@@ -7,6 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "ingest": "tsx src/scripts/ingest.ts",
+    "forms": "tsx src/scripts/forms.ts",
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",

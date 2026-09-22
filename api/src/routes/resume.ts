@@ -127,6 +127,54 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
   });
 
   /**
+   * Choose which stored résumé gets attached.
+   *
+   * FR-4 allows several files and exactly one active, but until now the only
+   * way to become active was to be the most recent upload — which made the
+   * rule unusable in the one case it exists for. A candidate aiming the same
+   * facts at two job families (Sara in §4 of the requirements) keeps two
+   * résumés and switches between them; re-uploading to switch would fork the
+   * history of a document that has not changed.
+   *
+   * Idempotent, so a double-click cannot deactivate everything.
+   */
+  app.post('/api/resume/:id/activate', async (req, reply) => {
+    const candidateId = await currentCandidateId();
+    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+
+    const { id } = req.params as { id: string };
+    const row = await prisma.resumeFile.findFirst({ where: { id, candidateId } });
+    if (!row) return reply.code(404).send({ error: 'no such résumé' });
+
+    // Refuse rather than activate a row whose bytes have gone. Attaching a
+    // file that is not there fails at the worst possible moment — on the
+    // employer's form, with the candidate assuming it went.
+    const bytes = await readStored(row.storageKey);
+    if (!bytes) {
+      return reply.code(410).send({
+        error: 'the stored file is gone — upload it again',
+        filename: row.filename,
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.resumeFile.updateMany({
+        where: { candidateId, active: true, NOT: { id: row.id } },
+        data: { active: false },
+      });
+      await tx.resumeFile.update({ where: { id: row.id }, data: { active: true } });
+    });
+
+    return {
+      ok: true,
+      resume: {
+        id: row.id, filename: row.filename, bytes: row.bytes,
+        sha256: row.sha256, uploadedAt: row.uploadedAt, active: true,
+      },
+    };
+  });
+
+  /**
    * Stop attaching a résumé.
    *
    * Deletes the bytes only when no other row still points at them — uploads are
@@ -143,11 +191,27 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
 
     await prisma.resumeFile.delete({ where: { id: row.id } });
 
+    // Deleting the active file used to leave nothing active, so the next
+    // application quietly attached no résumé — a silent downgrade of every
+    // plan, discovered on the employer's form. If another file is on hand,
+    // promote the most recent one and say which.
+    let promoted: { id: string; filename: string } | null = null;
+    if (row.active) {
+      const next = await prisma.resumeFile.findFirst({
+        where: { candidateId },
+        orderBy: { uploadedAt: 'desc' },
+      });
+      if (next) {
+        await prisma.resumeFile.update({ where: { id: next.id }, data: { active: true } });
+        promoted = { id: next.id, filename: next.filename };
+      }
+    }
+
     const stillReferenced = await prisma.resumeFile.count({
       where: { storageKey: row.storageKey },
     });
     if (stillReferenced === 0) await deleteStored(row.storageKey);
 
-    return { ok: true, deletedBytes: stillReferenced === 0 };
+    return { ok: true, deletedBytes: stillReferenced === 0, promoted };
   });
 }

@@ -224,9 +224,31 @@ export async function listJobs(boardToken: string): Promise<JobPosting[]> {
  * This is the call that removes the need for a browser during planning.
  */
 export async function fetchForm(job: JobPosting): Promise<JobPosting> {
+  return (await fetchFormChecked(job)).posting;
+}
+
+/** The outcome of asking a vendor for a form, with "could not ask" kept separate. */
+export interface FormFetch {
+  /**
+   * True when the vendor answered us.
+   *
+   * This is the distinction the plain `fetchForm` above cannot express: it
+   * returns the posting unchanged both when the employer publishes no form and
+   * when the request failed, and those are different facts. A caller that
+   * writes to the database needs to tell them apart, because recording a
+   * timeout as "this employer publishes no form" is a lie that persists — the
+   * posting stops being retried and the candidate is told, permanently, that
+   * there is nothing to read.
+   */
+  reached: boolean;
+  /** Carries `questions` only when the vendor answered. */
+  posting: JobPosting;
+}
+
+export async function fetchFormChecked(job: JobPosting): Promise<FormFetch> {
   const url = `${BASE}/${encodeURIComponent(job.boardToken)}/jobs/${job.vendorJobId}?questions=true`;
   const res = await fetchJson<GhJobDetail>(url);
-  if (!res.ok || !res.data) return job;
+  if (!res.ok || !res.data) return { reached: false, posting: job };
 
   const questions = (res.data.questions ?? []).map(mapQuestion);
   const demographicQuestionCount = res.data.demographic_questions?.questions?.length ?? 0;
@@ -234,5 +256,8 @@ export async function fetchForm(job: JobPosting): Promise<JobPosting> {
     .filter((c) => c.type)
     .map((c) => `${c.type}${c.requires_consent ? ' (consent required)' : ''}`);
 
-  return { ...job, questions, demographicQuestionCount, complianceNotes };
+  return {
+    reached: true,
+    posting: { ...job, questions, demographicQuestionCount, complianceNotes },
+  };
 }

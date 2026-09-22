@@ -278,3 +278,63 @@ export interface ProfilePayload {
   bank: Array<{ labelKey: string; value: string }>;
   variants: Array<{ name: string; active: boolean }>;
 }
+
+/* ── résumé analysis (works on any pasted job description) ── */
+
+export type Severity = 'good' | 'warn' | 'bad';
+
+export interface Finding {
+  severity: Severity;
+  message: string;
+  /** What to do. Never the words to use — the action to take. */
+  fix?: string;
+}
+
+export interface AnalysisCategory {
+  key: 'keywords' | 'evidence' | 'impact' | 'structure' | 'completeness' | 'ats';
+  label: string;
+  score: number;
+  /** 0 means the category could not be judged and is excluded from the score. */
+  weight: number;
+  measured: string;
+  findings: Finding[];
+}
+
+export interface ResumeAnalysis {
+  score: number;
+  band: 'weak' | 'fair' | 'strong';
+  categories: AnalysisCategory[];
+  target: {
+    title: string | null;
+    asked: string[];
+    evidenced: string[];
+    claimedNotShown: string[];
+    missing: string[];
+  } | null;
+  topFixes: Finding[];
+}
+
+export interface AnalyzeResponse {
+  analysis: ResumeAnalysis;
+  /** What the extractor understood, so a bad paste is visible as one. */
+  readJob: {
+    title: string | null;
+    skills: string[];
+    requiredSkills: string[];
+    requirementsFound: boolean;
+    level: string | null;
+    workplace: string | null;
+    years: number | null;
+    characters: number;
+  } | null;
+  tailored: {
+    integrityOk: boolean;
+    bulletsKept: number;
+    bulletsAvailable: number;
+    roles: Array<{
+      title: string; company: string; start: string; end: string | null;
+      kept: TailoredBullet[]; dropped: TailoredBullet[];
+    }>;
+    text: string;
+  } | null;
+}

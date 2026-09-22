@@ -1,0 +1,38 @@
+name: ci
+
+# Typecheck and test every push. Both gates are the ones CLAUDE.md requires
+# before anything is called done, so they belong here rather than in a habit.
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Prisma Client is generated code the typecheck depends on, and it is not
+      # in the repo. Without this the API package fails to compile on a clean
+      # checkout even though it builds fine locally.
+      - run: pnpm --filter ./api exec prisma generate
+
+      - run: pnpm typecheck
+
+      # No database and no network: the suite runs against captured fixtures,
+      # which is why it can gate every push rather than a nightly.
+      - run: pnpm test
+
+      - run: pnpm build:extension

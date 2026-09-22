@@ -69,7 +69,7 @@ export function Analyze(): React.ReactElement {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' }}>
             <span className="lbl">Score</span>
             <span className="num" style={{
-              fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700,
+              letterSpacing: "-0.035em", fontWeight: 700,
               fontSize: '2.4rem', lineHeight: 1, color: BAND_COLOUR[a.band],
             }}>
               {a.score}
@@ -298,7 +298,7 @@ function CategoryRow({ c }: { c: AnalysisCategory }): React.ReactElement {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         {judged && (
           <span className="num" style={{
-            fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: '1.3rem',
+            letterSpacing: "-0.035em", fontWeight: 700, fontSize: '1.3rem',
             color: c.score >= 70 ? 'var(--good)' : c.score >= 40 ? 'var(--warn)' : 'var(--stop)',
           }}>
             {c.score}

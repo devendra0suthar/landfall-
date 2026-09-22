@@ -592,7 +592,7 @@ function Score({ k, v, note, tone }: {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <span className="lbl">{k}</span>
       <span style={{
-        fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700,
+        letterSpacing: "-0.035em", fontWeight: 700,
         fontSize: '1.7rem', lineHeight: 1, color: colour,
       }}>
         {v}

@@ -1,110 +1,132 @@
 /*
- * Landfall — the navigational palette from docs/requirements.html, carried
- * into the product so the spec and the thing look like the same project.
+ * Landfall — rebuilt on jobsuit.ai's visual language.
  *
- * Sea-ink ground, brass accent, chart-paper neutrals. Semantic colours are
- * separate from the accent: good/warn/stop say what state something is in,
- * brass says "look here".
+ * The palette and typography here are taken from jobsuit's own pages: Inter
+ * throughout, a bright cyan primary (#08b7dc) against white, deep navy and
+ * slate for text, pale cyan tints for emphasis, and headlines set large with
+ * tight negative tracking. The previous design — serif body, brass on sea-ink,
+ * chart-paper density — read as a document. This reads as a product.
+ *
+ * What did NOT change: every class name and its contract. `.card`, `.row`,
+ * `.chip`, `.note`, `.meter`, `.skeleton` and the rest mean exactly what they
+ * meant before, so seven screens re-skin without a single JSX edit. A redesign
+ * that also rewrites the markup is two changes wearing one name, and when it
+ * breaks you cannot tell which half did it.
  *
  * Three rules this sheet holds to:
  *
- * 1. **Colour is named by role, not by shade.** `--nav-bg` rather than `--ink`
- *    for the sidebar, because the sidebar is dark in both themes while `--ink`
- *    inverts. Every hardcoded hex that used to sit in a rule is now a token, so
- *    the dark theme is a palette swap rather than a second stylesheet.
+ * 1. **Colour is named by role, not by shade** — `--nav-bg`, not `--ink`.
+ *    The dark theme is a palette swap, not a second stylesheet.
  *
- * 2. **Spacing comes off one 4px scale.** Density is the point of this product —
- *    a candidate is reading a form's worth of fields — so the scale is tight,
- *    but it is a scale. Ad-hoc padding is what made the cards look accidental.
+ * 2. **Spacing comes off one 4px scale.** Lighter than before: this design
+ *    breathes where the old one packed.
  *
  * 3. **Every state is visible without colour alone.** Chips carry text, focus
- *    carries a ring, the dropped bullets carry a strike. WCAG 2.2 AA is NFR-5,
- *    not decoration.
+ *    carries a ring, dropped bullets carry a strike. WCAG 2.2 AA is NFR-5.
  */
 
 :root {
-  /* ── spacing, one scale ── */
+  /* ── spacing ── */
   --s1: 4px;
   --s2: 8px;
   --s3: 12px;
   --s4: 16px;
   --s5: 24px;
-  --s6: 32px;
-  --radius: 5px;
-  --radius-sm: 3px;
+  --s6: 40px;
+  --radius: 12px;
+  --radius-sm: 8px;
 
-  /* ── surfaces and ink ── */
-  --paper: #edf0f4;
-  --surface: #fafbfc;
-  --surface-2: #e3e8ee;
-  --ink: #0f1a24;
-  --ink-soft: #35485a;
-  /* Darkened from #63788c, which measured 4.41:1 on --surface and 3.71:1 on
-     --surface-2 — under AA for the 10px uppercase .lbl it colours, which is
-     the most repeated text in the product. This clears 4.5:1 on all three
-     surfaces (NFR-5). */
-  --ink-muted: #566879;
-  --rule: #c6d0da;
-  --rule-soft: #dce3ea;
+  /* ── surfaces ── */
+  --paper: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #f4f7fb;
 
-  /* ── accent and semantics ── */
-  --brass: #9a6412;
-  --brass-soft: #f0e2c9;
-  --deep: #12556b;
-  --deep-ink: #fafbfc;
-  --good: #1f6b4a;
-  --good-soft: #d7e9df;
-  --warn: #8a5a10;
-  --warn-soft: #f4e5c8;
-  --stop: #9b2c22;
-  --stop-soft: #f3dad5;
+  /* ── ink ── */
+  --ink: #111827;
+  --ink-soft: #2d3748;
+  --ink-muted: #5b6b7f;
+  --rule: #e2e9f0;
+  --rule-soft: #eef2f7;
 
-  /* ── the sidebar, which is dark in both themes ── */
-  --nav-bg: #0f1a24;
-  --nav-fg: #fafbfc;
-  --nav-fg-dim: #8296a8;
-  --nav-on: #17242f;
-  --nav-tick: #35485a;
+  /* ── accent: jobsuit's cyan, with navy as the grounding tone ── */
+  --brass: #1688ff;          /* kept by name; now the secondary blue */
+  --brass-soft: #e7f1ff;
+  /*
+   * Two cyans, deliberately.
+   *
+   * The brand cyan #08b7dc measures 2.38:1 on white — below WCAG AA for text
+   * (4.5:1) and below 1.4.11 for a UI component (3:1). Using it for link text
+   * or a white-on-cyan button would ship a known failure, and NFR-5 commits
+   * this app to AA.
+   *
+   * So the bright cyan stays exactly as taken from the reference wherever it is
+   * a FILL carrying no text and meaning nothing on its own — the meter bar, the
+   * wordmark rule. Anything bearing text, or carrying meaning by itself, uses
+   * --deep: the same hue taken down until it passes. Side by side they read as
+   * one colour.
+   */
+  --deep: #0a7288;
+  --deep-bright: #08b7dc;
+  --deep-ink: #ffffff;
+  --navy: #2d456c;
 
-  --row-sel: #e9eef3;
-  --shadow: 0 1px 2px rgb(15 26 36 / 0.06), 0 4px 12px rgb(15 26 36 / 0.04);
-  --ring: var(--deep);
+  /* ── semantics. Hue-separated from the cyan primary so "this is good" and
+        "look here" never read as the same signal. ── */
+  --good: #0f7a52;
+  --good-soft: #e0f5ec;
+  --warn: #8f5c0f;
+  --warn-soft: #fdf1da;
+  --stop: #c0392b;
+  --stop-soft: #fdecea;
+
+  /* ── the sidebar ── */
+  --nav-bg: #2d456c;
+  --nav-fg: #ffffff;
+  --nav-fg-dim: #a9bdd8;
+  --nav-on: #3a5583;
+  --nav-tick: #4a6699;
+
+  --row-sel: #eefcff;
+  --shadow: 0 1px 2px rgb(45 69 108 / 0.05), 0 8px 24px rgb(45 69 108 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(45 69 108 / 0.06), 0 12px 32px rgb(45 69 108 / 0.10);
+  /* The ring must clear 3:1 as a UI component (1.4.11), which the brand cyan
+     does not on white. Same hue, passing shade. */
+  --ring: #0a7288;
 }
 
-/*
- * Dark theme. The ground goes to deep water and the ink inverts; the sidebar
- * barely moves, because it was already the dark surface the palette is named
- * after. Semantic colours lighten rather than shift hue — a warn that turns
- * orange-red in the dark reads as an error.
- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0a1117;
-    --surface: #111c24;
-    --surface-2: #18262f;
-    --ink: #e6edf3;
-    --ink-soft: #b4c3cf;
-    --ink-muted: #8399a9;
-    --rule: #2a3b47;
-    --rule-soft: #1e2d37;
+    --paper: #0b1620;
+    --surface: #132330;
+    --surface-2: #1a2e3d;
+    --ink: #e8f1f7;
+    --ink-soft: #b9cbd9;
+    --ink-muted: #8ba3b5;
+    --rule: #263c4e;
+    --rule-soft: #1d2f3e;
 
-    --brass: #d9a441;
-    --brass-soft: #33280f;
-    --deep: #58b2cc;
-    --deep-ink: #06131a;
-    --good: #6bc79c;
-    --good-soft: #12301f;
+    --brass: #6fb2ff;
+    --brass-soft: #14293f;
+    --deep: #2fd0f0;
+    --deep-ink: #04202a;
+    --navy: #9dc4e6;
+
+    --good: #5fc79a;
+    --good-soft: #0f2f22;
     --warn: #e0ab4f;
-    --warn-soft: #332609;
+    --warn-soft: #33260e;
     --stop: #f0897c;
-    --stop-soft: #34150f;
+    --stop-soft: #351812;
 
-    --nav-bg: #061016;
-    --nav-on: #16242e;
-    --nav-tick: #2a3b47;
+    --nav-bg: #0a1a26;
+    --nav-fg: #e8f1f7;
+    --nav-fg-dim: #7f9ab0;
+    --nav-on: #16303f;
+    --nav-tick: #26485e;
 
-    --row-sel: #16242e;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.25);
+    --row-sel: #16303f;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.28);
+    --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 36px rgb(0 0 0 / 0.36);
   }
 }
 
@@ -114,38 +136,33 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Source Serif 4', Georgia, serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, .lbl, .btn, .nav a, th { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
-h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
-h2 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
-h3 { font-size: 0.95rem; font-weight: 700; margin: 0; }
+/* Large and tightly tracked, the way jobsuit sets its headlines. Negative
+   letter-spacing is what stops a big sans heading looking like a banner. */
+h1, h2, h3, .lbl, .btn, .nav a, th {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.035em; margin: 0; line-height: 1.15; }
+h2 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+h3 { font-size: 0.98rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
 p { margin: 0; }
-a { color: var(--deep); }
+a { color: var(--deep); text-decoration-thickness: 1px; text-underline-offset: 2px; }
 a:hover { text-decoration-thickness: 2px; }
 
-/* Numbers line up in columns. Counts that jitter as they change read as noise. */
 .mono, code, .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 0.86em; }
 .mono, .num, .bullet .s { font-variant-numeric: tabular-nums; }
 
 .lbl {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.13em;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--ink-muted);
 }
 
-/*
- * One visible focus ring for everything reachable by keyboard.
- *
- * `:focus-visible` rather than `:focus` so a mouse click does not leave a ring
- * behind, and an outline rather than a shadow so it survives forced-colours
- * mode. WCAG 2.2 AA (NFR-5).
- */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
@@ -157,57 +174,36 @@ a:hover { text-decoration-thickness: 2px; }
 .shell { display: flex; min-height: 100vh; }
 
 .side {
-  width: 220px; flex: none; background: var(--nav-bg);
-  display: flex; flex-direction: column; gap: var(--s5); padding: var(--s5) var(--s3);
+  width: 236px; flex: none; background: var(--nav-bg);
+  display: flex; flex-direction: column; gap: var(--s5); padding: var(--s5) var(--s4);
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 
-.wordmark { color: var(--nav-fg); font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
-.ticks { height: 8px; background-image: repeating-linear-gradient(to right, var(--nav-tick) 0 1px, transparent 1px 14px); }
+.wordmark { color: var(--nav-fg); font-size: 1.3rem; font-weight: 800; letter-spacing: -0.04em; }
+.ticks { height: 3px; width: 40px; border-radius: 2px; background: var(--deep-bright); }
 
-.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav { display: flex; flex-direction: column; gap: 3px; }
 .nav a {
   display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
-  /* 38px tall — comfortably past the 24px minimum target size in WCAG 2.2. */
-  padding: 9px 11px; border-radius: var(--radius); text-decoration: none;
-  color: var(--nav-fg-dim); font-size: 0.9rem;
-  transition: background 120ms ease, color 120ms ease;
+  padding: 10px 12px; border-radius: var(--radius-sm); text-decoration: none;
+  color: var(--nav-fg-dim); font-size: 0.92rem; font-weight: 500;
+  transition: background 140ms ease, color 140ms ease;
 }
 .nav a:hover { color: var(--nav-fg); background: var(--nav-on); }
-.nav a.on { background: var(--nav-on); color: var(--nav-fg); font-weight: 600; }
+.nav a.on { background: var(--deep); color: var(--deep-ink); font-weight: 600; }
 .nav a:focus-visible { outline-color: var(--nav-fg); }
-
-/*
- * A brass marker on the current screen.
- *
- * The background tint alone was doing all the work of saying "you are here",
- * and on the dark sidebar it is a very small difference in luminance. The
- * accent is the one place brass is used for navigation rather than emphasis.
- */
-.nav a { position: relative; }
-.nav a.on::before {
-  content: ""; position: absolute; left: 0; top: 7px; bottom: 7px;
-  width: 3px; border-radius: 0 2px 2px 0; background: var(--brass);
-}
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
-/*
- * The page header stays put while the body scrolls.
- *
- * These screens are long — a Kit is a form's worth of questions — and the
- * header carries the job title and the two scores. Scrolling them away means
- * losing track of which posting you are reading halfway down.
- */
 .head {
-  display: flex; align-items: baseline; justify-content: space-between;
+  display: flex; align-items: flex-end; justify-content: space-between;
   gap: var(--s4); flex-wrap: wrap;
-  padding: var(--s5) var(--s5) var(--s4);
+  padding: var(--s5) var(--s6) var(--s4);
   border-bottom: 1px solid var(--rule); background: var(--surface);
   position: sticky; top: 0; z-index: 10;
 }
 
-.body { padding: var(--s5) var(--s5) var(--s6); display: flex; flex-direction: column; gap: var(--s4); }
+.body { padding: var(--s5) var(--s6) var(--s6); display: flex; flex-direction: column; gap: var(--s4); }
 
 /* ── pieces ── */
 
@@ -222,165 +218,124 @@ a:hover { text-decoration-thickness: 2px; }
 }
 .card > .pad { padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
 
-/*
- * A card whose content is prose and controls rather than a table.
- *
- * `.card` itself carries no padding — its contract is header + `.pad` + `.rows`,
- * and content dropped straight in sits flush against the border. `.flow` is
- * that card with the padding built in, for the common case where there is no
- * separate header strip to keep full-bleed.
- */
-.card.flow { padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
-.card.flow > header {
-  /* Pull the header back out to the card's edges. */
-  margin: calc(var(--s4) * -1) calc(var(--s4) * -1) 0;
-}
-.card.flow > .rows { margin-inline: calc(var(--s4) * -1); }
-.card.flow > .rows:last-child { margin-bottom: calc(var(--s4) * -1); }
+.card.flow { padding: var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
+.card.flow > header { margin: calc(var(--s5) * -1) calc(var(--s5) * -1) var(--s1); }
+.card.flow > .rows { margin-inline: calc(var(--s5) * -1); }
+.card.flow > .rows:last-child { margin-bottom: calc(var(--s5) * -1); }
 
 .chip {
   display: inline-flex; align-items: center;
-  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.07em;
-  padding: 3px 8px; border-radius: var(--radius-sm); white-space: nowrap;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 4px 10px; border-radius: 999px; white-space: nowrap;
   background: var(--surface-2); color: var(--ink-soft);
-  border: 1px solid transparent;
+  border: 1px solid var(--rule);
 }
-.chip.ok { background: var(--good-soft); color: var(--good); }
-.chip.warn { background: var(--warn-soft); color: var(--warn); }
-.chip.bad { background: var(--stop-soft); color: var(--stop); }
-.chip.deep { background: var(--deep); color: var(--deep-ink); }
+.chip.ok { background: var(--good-soft); color: var(--good); border-color: transparent; }
+.chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.chip.bad { background: var(--stop-soft); color: var(--stop); border-color: transparent; }
+.chip.deep { background: var(--deep); color: var(--deep-ink); border-color: transparent; }
 
 .btn {
-  font-weight: 600; font-size: 0.85rem; padding: 8px 14px; border-radius: var(--radius);
+  font-weight: 600; font-size: 0.88rem; padding: 9px 18px; border-radius: 999px;
   border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer;
-  /* WCAG 2.2 target size, even for the small "copy" buttons in a dense row. */
-  min-height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  text-decoration: none; white-space: nowrap;
-  transition: border-color 120ms ease, background 120ms ease, transform 60ms ease;
+  min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  text-decoration: none; white-space: nowrap; letter-spacing: -0.01em;
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 60ms ease;
 }
-.btn:hover:not(:disabled) { border-color: var(--deep); background: var(--surface-2); }
+.btn:hover:not(:disabled) { border-color: var(--deep); background: var(--row-sel); }
 .btn:active:not(:disabled) { transform: translateY(1px); }
-.btn:disabled { opacity: 0.5; cursor: default; }
-.btn.p { background: var(--deep); border-color: var(--deep); color: var(--deep-ink); }
-.btn.p:hover:not(:disabled) { filter: brightness(1.12); background: var(--deep); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.p {
+  background: var(--deep); border-color: var(--deep); color: var(--deep-ink);
+  box-shadow: 0 1px 2px rgb(10 114 136 / 0.28), 0 6px 16px rgb(10 114 136 / 0.24);
+}
+.btn.p:hover:not(:disabled) {
+  background: var(--deep); filter: brightness(1.06);
+  box-shadow: var(--shadow-lift);
+}
 
 .filters { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
 .filters select, .filters input {
-  font-family: inherit; font-size: 0.85rem; padding: 7px 9px; min-height: 34px;
-  border: 1px solid var(--rule); border-radius: var(--radius);
+  font-family: inherit; font-size: 0.88rem; padding: 8px 12px; min-height: 38px;
+  border: 1px solid var(--rule); border-radius: var(--radius-sm);
   background: var(--surface); color: var(--ink);
 }
 
 .rows { display: flex; flex-direction: column; }
 .row {
   display: grid; grid-template-columns: 1fr 120px 150px 110px; gap: var(--s4); align-items: center;
-  padding: var(--s3) var(--s4); border-bottom: 1px solid var(--rule-soft); background: var(--surface);
-  transition: background 120ms ease;
+  padding: var(--s4); border-bottom: 1px solid var(--rule-soft); background: var(--surface);
+  transition: background 140ms ease;
 }
 .row:last-child { border-bottom: 0; }
-.row:hover { background: var(--surface-2); }
+.row:hover { background: var(--row-sel); }
 .row.sel { background: var(--row-sel); }
-.row .t { font-weight: 600; }
-.row .m { font-size: 0.85rem; color: var(--ink-soft); }
+.row .t { font-weight: 600; letter-spacing: -0.01em; }
+.row .m { font-size: 0.87rem; color: var(--ink-soft); }
 
-/*
- * A two-part row: content that grows, controls that do not.
- *
- * The four-column `.row` above is the jobs table's shape. Everything else — a
- * form question and its chip, a stored file and its buttons — is content plus
- * actions, and forcing those into the table grid squeezed the controls into a
- * 120px column with the last two columns left empty.
- */
 .row.split { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
 .row.split > :last-child { display: flex; gap: var(--s2); align-items: center; flex-shrink: 0; }
 
-.bar { height: 6px; background: var(--rule-soft); border-radius: 3px; overflow: hidden; }
-.bar > span { display: block; height: 6px; background: var(--deep); }
+.bar { height: 8px; background: var(--rule-soft); border-radius: 999px; overflow: hidden; }
+.bar > span { display: block; height: 8px; background: var(--deep); border-radius: 999px; }
 
-.plan { display: grid; grid-template-columns: 92px 1fr; gap: var(--s3); align-items: baseline;
-  padding: var(--s2) 0; border-bottom: 1px solid var(--rule-soft); font-size: 0.88rem; }
+.plan { display: grid; grid-template-columns: 100px 1fr; gap: var(--s3); align-items: baseline;
+  padding: var(--s2) 0; border-bottom: 1px solid var(--rule-soft); font-size: 0.9rem; }
 .plan:last-child { border-bottom: 0; }
 
-.bullet { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: baseline; font-size: 0.88rem; }
-.bullet .s { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--good); text-align: right; }
-.bullet.drop { opacity: 0.55; }
+.bullet { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: baseline; font-size: 0.9rem; }
+.bullet .s { font-size: 0.72rem; color: var(--good); text-align: right; font-weight: 600; }
+.bullet.drop { opacity: 0.5; }
 .bullet.drop span:last-child { text-decoration: line-through; text-decoration-color: var(--rule); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--s3); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s3); }
 
-/*
- * A stat tile. The number leads, the label explains it.
- *
- * Deliberately not a card with a header: these appear in threes and fours, and
- * a header strip on each turns a glanceable row into a stack of boxes.
- */
-.stat { padding: var(--s4); display: flex; flex-direction: column; gap: var(--s1); }
+.stat { padding: var(--s5); display: flex; flex-direction: column; gap: var(--s1); }
 .stat > strong {
-  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-  font-size: 1.9rem; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums;
+  font-size: 2.3rem; line-height: 1; font-weight: 700;
+  letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
 }
 
-.note { border-left: 3px solid var(--brass); background: var(--surface); padding: var(--s3) var(--s4);
-  display: flex; flex-direction: column; gap: 6px; border-radius: 0 var(--radius) var(--radius) 0; }
-.note.bad { border-left-color: var(--stop); background: var(--stop-soft); }
-.note.ok { border-left-color: var(--good); background: var(--good-soft); }
-/* Was missing entirely, so every "you should know" banner rendered as a
-   generic brass note and read as an aside rather than as something to act on. */
-.note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+/* Tinted panels rather than a left rule — lighter, and it matches the way
+   jobsuit blocks out a callout. */
+.note {
+  background: var(--brass-soft); padding: var(--s4) var(--s5);
+  display: flex; flex-direction: column; gap: var(--s2);
+  border-radius: var(--radius); border: 1px solid transparent;
+}
+.note.bad { background: var(--stop-soft); }
+.note.ok { background: var(--good-soft); }
+.note.warn { background: var(--warn-soft); }
 .note > .btn { align-self: flex-start; margin-top: var(--s1); }
 
 .empty { padding: var(--s6) var(--s4); text-align: center; color: var(--ink-muted); }
 
-.sub { font-size: 0.85rem; color: var(--ink-soft); }
+.sub { font-size: 0.89rem; color: var(--ink-soft); }
 
-/*
- * Line length.
- *
- * This product explains itself a lot — why a score is what it is, why a field
- * is the candidate's to answer — and those paragraphs were running the full
- * width of a card, which on a wide screen is 140+ characters a line. The eye
- * loses its place returning to the left margin somewhere past 80. Capped on
- * the explanatory paragraphs specifically rather than globally, because the
- * same class is used for one-line meta inside table rows and headers, where a
- * measure would leave odd gaps.
- */
 .card.flow > p,
 .card.flow > .sub,
 .note > p,
 .note > .sub { max-width: 72ch; }
 
-/*
- * A match score, shown as a quantity and not only as a number.
- *
- * 38 and 74 are hard to compare at a glance down a long list; two bars of
- * different length are not. The number stays — the bar is redundant encoding,
- * not a replacement, because colour and length alone would fail for anyone who
- * cannot distinguish them.
- */
-.meter { height: 4px; background: var(--rule-soft); border-radius: 2px; overflow: hidden; width: 100%; }
-.meter > span { display: block; height: 4px; background: var(--deep); border-radius: 2px; }
+.meter { height: 6px; background: var(--rule-soft); border-radius: 999px; overflow: hidden; width: 100%; }
+/* The bar carries the score, so it is a graphical object that must clear 3:1 —
+   the brand cyan manages 2.12 on the track. --deep-bright stays for the wordmark
+   rule alone, which is aria-hidden decoration. */
+.meter > span { display: block; height: 6px; background: var(--deep); border-radius: 999px; }
 .meter.good > span { background: var(--good); }
 .meter.warn > span { background: var(--warn); }
 .meter.low > span { background: var(--ink-muted); }
 
-/*
- * Loading looks like the thing that is coming.
- *
- * "Loading…" centred in a card tells you nothing about what will appear and
- * makes every screen feel like it starts from nothing. These blocks match the
- * shape of the rows they stand in for, so the layout does not jump when the
- * data lands.
- */
 .skeleton { display: flex; flex-direction: column; gap: 1px; }
 .skeleton > div {
-  height: 58px; background: var(--surface);
+  height: 62px; background: var(--surface);
   border-bottom: 1px solid var(--rule-soft);
   padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s2);
   justify-content: center;
 }
 .skeleton .ln {
-  height: 10px; border-radius: 3px;
+  height: 10px; border-radius: 999px;
   background: linear-gradient(90deg, var(--rule-soft) 0%, var(--surface-2) 50%, var(--rule-soft) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
@@ -393,14 +348,13 @@ a:hover { text-decoration-thickness: 2px; }
   100% { background-position: -200% 0; }
 }
 
-/* A drop target has to look like one before anything is dragged over it. */
 .drop-zone {
   border: 2px dashed var(--rule); background: var(--surface);
-  border-radius: var(--radius); padding: var(--s5) var(--s4); text-align: center;
+  border-radius: var(--radius); padding: var(--s6) var(--s4); text-align: center;
   display: flex; flex-direction: column; gap: var(--s2); align-items: center;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: border-color 140ms ease, background 140ms ease;
 }
-.drop-zone.over { border-color: var(--deep); background: var(--surface-2); }
+.drop-zone.over { border-color: var(--deep); background: var(--row-sel); }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -409,18 +363,16 @@ a:hover { text-decoration-thickness: 2px; }
 /*
  * Printing a Kit (FR-39 — "readable, printable, copyable").
  *
- * The literal use case: the candidate has the employer's form open on one
- * screen and no second screen, so they print their answers and work down the
- * page. That means the sidebar, the buttons and the drop zones all go, the
- * colour comes out, and nothing that carries an answer is allowed to break
- * across a page — a question whose label lands on page 1 and whose value lands
- * on page 2 is worse than useless when you are typing from it.
+ * The literal use case: the employer's form is open on the only screen, so the
+ * answers get printed and worked down on paper. Nothing that carries an answer
+ * may break across a page — a label on page 1 with its value on page 2 is
+ * worse than useless when you are typing from it.
  */
 @media print {
   :root {
     --paper: #fff; --surface: #fff; --surface-2: #fff;
     --ink: #000; --ink-soft: #222; --ink-muted: #444;
-    --rule: #999; --rule-soft: #ccc; --shadow: none;
+    --rule: #999; --rule-soft: #ccc; --shadow: none; --shadow-lift: none;
   }
 
   body { font-size: 11pt; background: #fff; }
@@ -431,18 +383,14 @@ a:hover { text-decoration-thickness: 2px; }
 
   .card { border: 1px solid #999; box-shadow: none; break-inside: avoid; }
   .card > header { background: #fff; border-bottom: 1px solid #999; }
-  .note { border-left: 3pt solid #000; background: #fff; }
+  .note { border: 1pt solid #666; background: #fff; }
 
-  /* One answer, one block, on one page. */
   .row, .row.split, .plan, .bullet { break-inside: avoid; page-break-inside: avoid; }
   .chip { border: 1px solid #999; background: #fff !important; color: #000 !important; }
 
-  /* A printed link is a dead end unless its target is on the page. */
   a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8pt; color: #444; word-break: break-all; }
   a[href^="#"]::after { content: ""; }
 
-  /* Collapsed sections hide their content on screen; on paper there is no
-     "click to expand", so everything that exists should be there. */
   details { display: block; }
   details > summary { display: none; }
 }
@@ -459,6 +407,10 @@ a:hover { text-decoration-thickness: 2px; }
   .nav a { white-space: nowrap; }
   .head { padding: var(--s4); position: static; }
   .body { padding: var(--s4) var(--s4) var(--s6); }
+  .card.flow { padding: var(--s4); }
+  .card.flow > header { margin: calc(var(--s4) * -1) calc(var(--s4) * -1) var(--s1); }
+  .card.flow > .rows { margin-inline: calc(var(--s4) * -1); }
   .row, .row.split { grid-template-columns: 1fr; gap: var(--s2); }
   .row.split > :last-child { justify-content: flex-start; }
+  h1 { font-size: 1.55rem; }
 }

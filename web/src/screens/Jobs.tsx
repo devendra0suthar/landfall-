@@ -195,7 +195,7 @@ function JobLine({ job }: { job: JobRow }): React.ReactElement {
         {job.match ? (
           <>
             <span className="num" style={{
-              fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700,
+              letterSpacing: "-0.035em", fontWeight: 700,
               fontSize: '1.3rem', lineHeight: 1,
               color: job.match.score >= 60 ? 'var(--good)' : job.match.score >= 35 ? 'var(--warn)' : 'var(--ink-muted)',
             }}>

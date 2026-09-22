@@ -82,7 +82,7 @@ export function App(): React.ReactElement {
           <Aim />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span className="lbl">Your data lives in</span>
-            <span className="mono" style={{ color: '#b8c7d4' }}>India · ap-south-1</span>
+            <span className="mono" style={{ color: "var(--nav-fg-dim)" }}>India · ap-south-1</span>
           </div>
         </div>
       </aside>

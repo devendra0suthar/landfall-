@@ -3,13 +3,29 @@ packages:
   - web
   - extension
 
-# pnpm 11 keeps build-script approval here rather than in package.json.
+# pnpm 11 keeps build-script approval here rather than in package.json —
+# the `pnpm` field there is no longer read at all, and pnpm says so.
 # Prisma generates its client in a postinstall; esbuild unpacks a binary.
 onlyBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
   - prisma
   - esbuild
+
+# Ignored build scripts are a warning here, not a failure.
+#
+# On a clean install pnpm 11 raises ERR_PNPM_IGNORED_BUILDS for the packages
+# above even though they are approved — `pnpm config get onlyBuiltDependencies`
+# reads them back correctly, so the approval is registered and simply not
+# honoured. That is a pnpm bug, and with the default strictness it is fatal:
+# Render's build died on it after corepack was fixed, and it does not reproduce
+# on a developer machine because node_modules already exists.
+#
+# Failing the install is the wrong response even when the warning is right.
+# Nothing here depends on those postinstalls: `pnpm build` runs
+# `prisma generate` explicitly, and esbuild's binary arrives as the
+# @esbuild/<platform> optional dependency. Verified by clean clone + build.
+strictDepBuilds: false
 
 # Smart App Control on this machine blocks Rollup's unsigned native .node
 # binary (ERR_DLOPEN_FAILED, "An Application Control policy has blocked this

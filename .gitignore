@@ -18,3 +18,11 @@ design/landfall-screens.html
 
 # Built extension bundle — rebuilt with `pnpm build:extension`.
 extension/dist/
+
+# Scratch from probing a deployment — cookie jars, captured responses, test CVs.
+# These carry session tokens and personal data; they are never part of the repo.
+api/*.json
+!api/package.json
+!api/tsconfig.json
+api/*.txt
+api/*.pdf

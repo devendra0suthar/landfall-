@@ -35,6 +35,8 @@ import type { Prisma } from '@prisma/client';
 
 interface Ranked {
   ids: string[];
+  /** The best score in the whole result set, not just this page. */
+  top: number;
   computedAt: number;
 }
 
@@ -67,11 +69,11 @@ export async function rankedJobIds(
   profile: CandidateProfile,
   profileStamp: string,
   where: Prisma.JobWhereInput,
-): Promise<string[]> {
+): Promise<{ ids: string[]; top: number }> {
   evict();
   const key = `${candidateId}|${profileStamp}|${JSON.stringify(where)}`;
   const hit = cache.get(key);
-  if (hit) return hit.ids;
+  if (hit) return { ids: hit.ids, top: hit.top };
 
   // Only the columns scoring reads — notably NOT `description`. Ranking used to
   // pull every description and re-run `extractFacts` over it, which measured at
@@ -118,8 +120,9 @@ export async function rankedJobIds(
   scored.sort((a, b) => b.score - a.score || b.posted - a.posted);
 
   const ids = scored.map((s) => s.id);
-  cache.set(key, { ids, computedAt: Date.now() });
-  return ids;
+  const top = scored[0]?.score ?? 0;
+  cache.set(key, { ids, top, computedAt: Date.now() });
+  return { ids, top };
 }
 
 /** Drop every ranking for a candidate — their facts changed. */

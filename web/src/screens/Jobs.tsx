@@ -38,7 +38,7 @@ export function Jobs(): React.ReactElement {
   const { data, error, loading } = useAsync(
     () => api<{
       count: number; total: number; offset: number; hasMore: boolean;
-      scored: boolean; eligibilityApplied: boolean; sortedBy: 'match'|'recent'; rows: JobRow[];
+      scored: boolean; eligibilityApplied: boolean; sortedBy: 'match'|'recent'; bestMatch: number | null; rows: JobRow[];
     }>(`/api/jobs?${q.toString()}`),
     [country, days, formOnly, eligibleOnly, offset],
   );
@@ -134,6 +134,38 @@ export function Jobs(): React.ReactElement {
               which is what every tailored résumé is then selected from.
             </p>
             <a className="btn p" href="#/resume">Upload my résumé →</a>
+          </div>
+        )}
+
+        {/*
+          * Said when the data says it, not as boilerplate.
+          *
+          * This index is Greenhouse boards, which in practice means software
+          * companies. A photographer, a nurse or a teacher signing up sees
+          * thousands of roles and nothing that fits, with no explanation — and
+          * concludes the matching is broken rather than that the index is not
+          * for them. Measured: a working photographer's CV scores nothing here,
+          * because there are zero photography postings in 5,402.
+          *
+          * The threshold is deliberately low. Above 40 there is something worth
+          * reading and the banner would be noise; below it, the honest thing is
+          * to say so and point at the one path that does work for them.
+          */}
+        {data && data.scored && data.bestMatch !== null && data.bestMatch < 40 && (
+          <div className="note warn">
+            <span className="lbl">This index may not cover your field</span>
+            <p>
+              The best match here scores {data.bestMatch} out of 100. Landfall indexes
+              Greenhouse job boards, which in practice are mostly software companies —
+              so if you work outside that, the roles below genuinely are not for you,
+              and that is the index being narrow rather than your profile being weak.
+            </p>
+            <p className="sub">
+              <strong>Paste any job description instead.</strong> Analysis works on a
+              posting from anywhere — an agency, a job board, an email — and gives you
+              the same tailored résumé, letter and answer sheet.
+            </p>
+            <a className="btn p" href="#/analyze">Analyse a job I found elsewhere →</a>
           </div>
         )}
 

@@ -105,18 +105,23 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
     };
 
     let total: number;
+    // The best score across the WHOLE result set, so the screen can tell someone
+    // the index does not cover their field instead of letting them scroll 2,563
+    // roles working it out themselves.
+    let bestMatch: number | null = null;
     let jobs: Awaited<ReturnType<typeof prisma.job.findMany<{ include: typeof rowInclude }>>>;
 
     if (wantMatch && profile) {
       // The ranking is computed once per profile and filter, then paged. See
       // jobs/ranking.ts for why it cannot be an ORDER BY.
-      const ranked = await rankedJobIds(
+      const { ids: ranked, top } = await rankedJobIds(
         session!.candidateId,
         profile,
         profileStamp ?? '',
         where,
       );
       total = ranked.length;
+      bestMatch = top;
       const pageIds = ranked.slice(q.offset, q.offset + q.limit);
       const rows = pageIds.length === 0 ? [] : await prisma.job.findMany({
         where: { id: { in: pageIds } },
@@ -152,6 +157,8 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
       scored: profile !== null,
       /** 'match' or 'recent' — so the screen can say how the list is ordered. */
       sortedBy: wantMatch ? 'match' : 'recent',
+      /** Highest match in the whole result set — null when nothing was ranked. */
+      bestMatch,
       /**
        * Whether the eligibility filter actually did anything. Asking for it
        * with no country on the profile is a no-op, and a screen that showed

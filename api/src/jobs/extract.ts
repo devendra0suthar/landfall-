@@ -70,6 +70,34 @@ const VOCAB: readonly string[] = [
   // ways of working
   'agile', 'scrum', 'kanban', 'stakeholder management', 'mentoring',
   'code review', 'technical writing', 'on-call',
+
+  // ── visual media, photography and production ──
+  //
+  // Added because the vocabulary was measurably a *software* vocabulary
+  // pretending to be a general one. Run against a working photographer's CV —
+  // Lightroom, Capture One, Hasselblad, photojournalism, colour grading — it
+  // recognised exactly one word, "campaigns", and that was a false positive
+  // from marketing. The same CV parsed as a person with no skills at all,
+  // scored zero against everything, and there was nothing in the product to
+  // say why.
+  //
+  // Chosen the same way as the rest: a term earns its place only if its
+  // ordinary use in a job posting is about the work. Deliberately absent —
+  // 'camera' (computer vision), 'studio' (Android Studio, Looker Studio),
+  // 'lighting', 'composition', 'editing', 'print', 'shoot' — all of which
+  // fire constantly on postings that have nothing to do with this.
+  'lightroom', 'photoshop', 'capture one', 'indesign', 'illustrator',
+  'after effects', 'premiere pro', 'davinci resolve', 'final cut', 'cinema 4d',
+  'blender', 'adobe creative suite', 'creative cloud',
+  'photography', 'photographer', 'photojournalism', 'videography',
+  'cinematography', 'portrait photography', 'product photography',
+  'event photography', 'fashion photography', 'architectural photography',
+  'retouching', 'photo editing', 'colour grading', 'color grading',
+  'compositing', 'motion graphics', 'storyboarding', 'art direction',
+  'studio lighting', 'medium format', 'mirrorless', 'dslr', 'drone',
+  'print production', 'pre-press', 'digital asset management',
+  'brand identity', 'typography', 'visual storytelling', 'copywriting',
+  'video editing', 'sound design', 'location scouting', 'model release',
 ];
 
 /** Multi-word terms first, so "react native" is not consumed by "react". */
@@ -323,7 +351,22 @@ export function termsIn(haystack: string): string[] {
   for (const term of SORTED_VOCAB) {
     // Word-boundary match that tolerates the punctuation in "c++", "ci/cd".
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`(^|[^a-z0-9+#./])${escaped}($|[^a-z0-9+#./])`, 'g');
+    // A full stop ends a term unless a word follows it.
+    //
+    // `.` has to be excluded from the boundary class or "node" matches inside
+    // "node.js" and ".net" loses its leading dot. But excluding it outright
+    // meant a full stop *after* a term blocked the match too — so
+    // "Python. Kubernetes. Docker." found nothing at all, and every skill that
+    // happened to end a sentence was invisible to matching, tailoring, the gap
+    // report and the analyser alike. CVs are full of sentences ending in a
+    // tool's name.
+    //
+    // The lookahead splits the two cases: a dot followed by a word character is
+    // still part of a term, a dot followed by anything else is punctuation.
+    const re = new RegExp(
+      `(^|[^a-z0-9+#./])${escaped}($|[^a-z0-9+#./]|\\.(?![a-z0-9+#/]))`,
+      'g',
+    );
     let m: RegExpExecArray | null;
     while ((m = re.exec(lower)) !== null) {
       const start = m.index + (m[1]?.length ?? 0);

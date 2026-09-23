@@ -40,6 +40,13 @@ const PUBLIC: Record<string, string> = {
   'GET /api/auth/google/available': 'says whether the server has Google credentials; no data',
   'GET /api/auth/google': 'the door — starts the OAuth redirect',
   'GET /api/auth/google/callback': 'the door — state-checked, and it is what mints the session',
+  // Signing out with no session is a no-op, and `endSession` only ever ends the
+  // caller's own — it resolves the session itself rather than being handed one,
+  // which is why the guard names below do not appear in its body.
+  'POST /api/auth/logout': 'ends only the caller\'s own session; no session is a no-op',
+  // Reports whether the server has model credentials. Says nothing about any
+  // candidate, and the screen needs it to decide whether to offer the feature.
+  'GET /api/suggest/status': 'whether a model is configured; no candidate data',
 };
 
 /** How the guard may be spelled. `freshCandidate` is account.ts wrapping it. */
@@ -54,10 +61,19 @@ function routesIn(dir: string): Route[] {
     lines.forEach((line, i) => {
       const m = /app\.(get|post|put|patch|delete)\(\s*'([^']+)'/.exec(line);
       if (!m) return;
-      // The guard is the first thing a handler does, so a short window is
-      // enough — and a wide one would let a guard in the *next* handler count
-      // for this one, which is the bug this test is supposed to catch.
-      const body = lines.slice(i, i + 25).join('\n');
+      // Scan to the NEXT route declaration, not a fixed number of lines.
+      //
+      // This was a 25-line window, and it lied. `/api/suggest/status` is a
+      // six-line handler with no guard at all; the window ran past its end and
+      // found `requireCandidate` in the handler below it, so the test reported
+      // the route as protected. It was live and unauthenticated for a week.
+      // A safety test that reads the wrong function is worse than no test,
+      // because it is believed.
+      const nextRoute = lines.findIndex(
+        (l, k) => k > i && /app\.(get|post|put|patch|delete)\(\s*'/.test(l),
+      );
+      const end = nextRoute === -1 ? lines.length : nextRoute;
+      const body = lines.slice(i, end).join('\n');
       const guard = GUARDS.find((g) => body.includes(g)) ?? null;
       found.push({
         method: (m[1] ?? '').toUpperCase(),

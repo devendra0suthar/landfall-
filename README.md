@@ -46,7 +46,14 @@ on your behalf, or touch a logged-in session. See `docs/PROJECT.md`.
 | Résumé rewording — Claude proposes, you accept line by line | working (`POST /api/suggest`, `#/improve`) — FR-45…FR-48 |
 | …and a verifier that refuses invented facts | working (`api/src/suggest/verify.ts`) — a proposal that adds a number, a tool, a name or a claim of credit is discarded before you see it |
 | …optional to the deployment | with no `ANTHROPIC_API_KEY` the feature switches off and says so; nothing else calls a model |
-| Tests — 80, against real captured fixtures | `pnpm test` |
+| Accounts — sign-up, sign-in, sessions | working (`/api/auth/*`) — FR-24; scrypt, `httpOnly` cookie, only the token hash stored |
+| …every route scoped to the signed-in candidate | `requireCandidate()` in `api/src/auth/session.ts` is the only way a route learns who is asking — the 15 copies of `currentCandidateId()` are gone |
+| …re-auth before data leaves or changes | working (FR-27) — export, erasure and profile edits refuse a password proof older than 12h |
+| …browsing still needs no account | FR-24; the index is public and reports `match: null` signed out |
+| Rate limiting | 10/min on `/api/auth/*`, 20/min on `/api/suggest`, 600/min overall |
+| One origin — API serves the built front end | working (`@fastify/static`), so §9's relative paths hold in production |
+| Deployment — Render blueprint, real migrations | `render.yaml` + `prisma/migrations/0_init`; see `docs/DEPLOY.md` |
+| Tests — 89, against real captured fixtures | `pnpm test` |
 
 ## Running it
 

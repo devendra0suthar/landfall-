@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { sessionFromRequest } from '../auth/session.js';
 import { loadBank, loadPosting, loadProfile, toIndexed } from '../profile/load.js';
 import { scoreJob } from '../score/score.js';
 import { compilePlan } from '../plan/plan.js';
@@ -41,8 +42,10 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
       ? new Date(Date.now() - q.postedWithinDays * 86_400_000)
       : undefined;
 
-    const candidate = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-    const profile = candidate ? await loadProfile(candidate.id) : null;
+    // Browsing needs no account (FR-24). Match scores need a profile, so a
+    // signed-out visitor gets the index with `match: null` rather than a 401.
+    const session = await sessionFromRequest(req);
+    const profile = session ? await loadProfile(session.candidateId) : null;
 
     const where = {
       ...(q.country ? { country: q.country } : {}),
@@ -167,14 +170,16 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
     });
     if (!job) return reply.code(404).send({ error: 'no such job' });
 
-    const candidate = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-    const profile = candidate ? await loadProfile(candidate.id) : null;
+    // Browsing needs no account (FR-24). Match scores need a profile, so a
+    // signed-out visitor gets the index with `match: null` rather than a 401.
+    const session = await sessionFromRequest(req);
+    const profile = session ? await loadProfile(session.candidateId) : null;
 
     // Readiness needs the form compiled; match does not. Computing the plan
     // here is what makes the detail view able to show both.
     let score = null;
-    if (profile && candidate) {
-      const [posting, bank] = await Promise.all([loadPosting(id), loadBank(candidate.id)]);
+    if (profile && session) {
+      const [posting, bank] = await Promise.all([loadPosting(id), loadBank(session.candidateId)]);
       const plan = posting ? compilePlan(posting, profile, bank) : null;
       score = scoreJob(toIndexed(job, job.board.slug), plan, profile);
     }

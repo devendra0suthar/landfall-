@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 
 /**
  * The verified facts, as the candidate sees them.
@@ -10,13 +11,13 @@ import { prisma } from '../lib/db.js';
  */
 
 export async function registerProfileRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/api/profile', async (_req, reply) => {
-    const candidate = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-    if (!candidate) return reply.code(404).send({ error: 'no candidate yet' });
+  app.get('/api/profile', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [profile, resume, bank, variants] = await Promise.all([
       prisma.profile.findUnique({
-        where: { candidateId: candidate.id },
+        where: { candidateId },
         include: {
           roles: {
             orderBy: { position: 'asc' },
@@ -25,14 +26,20 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
         },
       }),
       prisma.resumeFile.findFirst({
-        where: { candidateId: candidate.id, active: true },
+        where: { candidateId: candidateId, active: true },
         orderBy: { uploadedAt: 'desc' },
       }),
-      prisma.bankAnswer.findMany({ where: { candidateId: candidate.id }, orderBy: { labelKey: 'asc' } }),
-      prisma.variant.findMany({ where: { candidateId: candidate.id } }),
+      prisma.bankAnswer.findMany({ where: { candidateId }, orderBy: { labelKey: 'asc' } }),
+      prisma.variant.findMany({ where: { candidateId } }),
     ]);
 
     if (!profile) return reply.code(404).send({ error: 'no profile yet — run pnpm seed' });
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { email: true, region: true },
+    });
+    if (!candidate) return reply.code(404).send({ error: 'no candidate yet' });
 
     return {
       candidate: { email: candidate.email, region: candidate.region },

@@ -414,3 +414,54 @@ a:hover { text-decoration-thickness: 2px; }
   .row.split > :last-child { justify-content: flex-start; }
   h1 { font-size: 1.55rem; }
 }
+
+/* ── the door (FR-24) ───────────────────────────────────────────────────────
+ *
+ * Deliberately not the shell: no sidebar, no nav, one card centred on the
+ * page. There is nothing to navigate to before you are signed in, and showing
+ * a disabled version of the app behind a login only invites people to try it.
+ */
+.gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--s5) var(--s4);
+  background: var(--paper);
+}
+.gate-card { width: 100%; max-width: 27rem; }
+.gate-mark { font-size: 1.5rem; }
+.gate-foot { border-top: 1px solid var(--rule-soft); padding-top: var(--s3); }
+
+/* The re-auth prompt sits over the app rather than replacing it, so nothing
+ * in progress is lost while the password is confirmed (FR-27). */
+.gate-over {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  /* Not fully opaque: the work underneath stays visible, which is the whole
+   * argument for asking here instead of at a sign-in screen. */
+  background: color-mix(in srgb, var(--deep-ink) 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.field { display: flex; flex-direction: column; gap: var(--s1); }
+.field input {
+  font-family: inherit; font-size: 0.95rem; padding: 10px 12px; min-height: 42px;
+  border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink);
+}
+.field input:hover { border-color: var(--ink-muted); }
+
+/* A button that reads as a link — for the one-word action inside a sentence,
+ * where a pill would be louder than the sentence around it. */
+.btn.linkish {
+  border: none; background: none; padding: 0; min-height: 0;
+  color: var(--deep); text-decoration: underline; text-underline-offset: 2px;
+}
+.btn.linkish:hover:not(:disabled) { background: none; border-color: transparent; }
+.btn.navlink { color: var(--nav-fg-dim); align-self: flex-start; font-size: 0.78rem; }
+.btn.navlink:hover:not(:disabled) { color: var(--nav-on); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-over { backdrop-filter: none; }
+}

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { requireFreshAuth } from '../auth/session.js';
 
 /**
  * Editing the verified facts.
@@ -56,8 +57,10 @@ const nullable = (v: string | null | undefined): string | null => {
 
 export async function registerProfileEditRoutes(app: FastifyInstance): Promise<void> {
   app.put('/api/profile', async (req, reply) => {
-    const candidate = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-    if (!candidate) return reply.code(409).send({ error: 'no candidate yet' });
+    // The profile is the thing every document is built from, so editing it is
+    // one of the points FR-27 asks for a recent password proof.
+    const candidateId = await requireFreshAuth(req, reply);
+    if (!candidateId) return reply;
 
     const parsed = Body.safeParse(req.body);
     if (!parsed.success) {
@@ -78,9 +81,9 @@ export async function registerProfileEditRoutes(app: FastifyInstance): Promise<v
 
     const saved = await prisma.$transaction(async (tx) => {
       const profile = await tx.profile.upsert({
-        where: { candidateId: candidate.id },
+        where: { candidateId: candidateId },
         create: {
-          candidateId: candidate.id,
+          candidateId: candidateId,
           firstName: b.firstName,
           lastName: b.lastName,
           email: b.email,

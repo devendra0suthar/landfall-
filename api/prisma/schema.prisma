@@ -46,6 +46,11 @@ enum AnswerSource {
 model Candidate {
   id        String   @id @default(cuid())
   email     String   @unique
+  /// scrypt-derived, with its parameters stored alongside it — see
+  /// src/auth/password.ts. Nullable because rows seeded before accounts
+  /// existed have no password and must set one before they can sign in;
+  /// null never means "any password will do".
+  passwordHash String?
   /// Where this candidate's data is stored. A deployment property, not a flag
   /// the candidate can flip (NFR-4).
   region    String   @default("ap-south-1")
@@ -56,6 +61,35 @@ model Candidate {
   applications Application[]
   bankAnswers  BankAnswer[]
   variants     Variant[]
+  sessions     Session[]
+}
+
+/// A signed-in browser (FR-24, FR-27).
+///
+/// The cookie value itself is never stored — only its SHA-256 — so a dump of
+/// this table does not hand anyone a live session. Rows are deleted with the
+/// candidate, like everything else (§8).
+model Session {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 of the token in the cookie, hex.
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  /// When the password was last actually proved. FR-27 re-authenticates before
+  /// data leaves or changes, and this — not createdAt — is what that is
+  /// measured from, so a session kept alive by browsing does not silently
+  /// become a permanent credential.
+  authedAt  DateTime @default(now())
+  /// Recorded so a candidate can recognise their own sessions. Never used to
+  /// authenticate: a fingerprint that grants access is a fingerprint worth
+  /// forging.
+  userAgent String?
+
+  @@index([candidateId])
+  @@index([expiresAt])
 }
 
 /// The verified facts. Entered once, reused on every form — never inferred

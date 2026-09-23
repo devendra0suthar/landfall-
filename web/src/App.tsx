@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Component, useCallback, useEffect, useState } from 'react';
 import { Jobs } from './screens/Jobs.js';
 import { Kit } from './screens/Kit.js';
 import { Resume } from './screens/Resume.js';
@@ -9,6 +9,9 @@ import { Profile } from './screens/Profile.js';
 import { Gaps } from './screens/Gaps.js';
 import { ParseReview } from './screens/ParseReview.js';
 import { Aim } from './Aim.js';
+import { SignIn, ReauthPrompt } from './screens/SignIn.js';
+import { api, REAUTH, SIGNED_OUT } from './api.js';
+import type { Me } from './api.js';
 
 /**
  * The shell, and the router.
@@ -53,12 +56,51 @@ function parse(hash: string): Route {
 
 export function App(): React.ReactElement {
   const [route, setRoute] = useState<Route>(() => parse(window.location.hash));
+  const [me, setMe] = useState<Me | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [reauth, setReauth] = useState(false);
+
+  // Who is asking — answered once, before anything else renders. A screen that
+  // starts loading data it is not allowed to see just produces a flash of
+  // content followed by a row of 401s.
+  const check = useCallback(async (): Promise<void> => {
+    try {
+      setMe(await api<Me>('/api/auth/me'));
+    } catch {
+      // The API being down is not the same as being signed out, but from here
+      // they look identical and both end at the same screen.
+      setMe({ candidate: null });
+    }
+    setChecked(true);
+  }, []);
+
+  useEffect(() => { void check(); }, [check]);
+
+  useEffect(() => {
+    const out = (): void => setMe({ candidate: null });
+    const again = (): void => setReauth(true);
+    window.addEventListener(SIGNED_OUT, out);
+    window.addEventListener(REAUTH, again);
+    return () => {
+      window.removeEventListener(SIGNED_OUT, out);
+      window.removeEventListener(REAUTH, again);
+    };
+  }, []);
 
   useEffect(() => {
     const onHash = (): void => setRoute(parse(window.location.hash));
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
+
+  async function signOut(): Promise<void> {
+    await api('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    setMe({ candidate: null });
+  }
+
+  // A blank frame beats a flash of the app followed by the sign-in screen.
+  if (!checked) return <div className="gate" aria-busy="true" />;
+  if (!me?.candidate) return <SignIn onSignedIn={(m) => { setMe(m); void check(); }} />;
 
   return (
     <div className="shell">
@@ -85,6 +127,13 @@ export function App(): React.ReactElement {
         <div className="region" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Aim />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span className="lbl">Signed in as</span>
+            <span className="mono" style={{ color: 'var(--nav-fg-dim)', overflowWrap: 'anywhere' }}>
+              {me.candidate.email}
+            </span>
+            <button className="btn linkish navlink" onClick={() => void signOut()}>Sign out</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <span className="lbl">Your data lives in</span>
             <span className="mono" style={{ color: "var(--nav-fg-dim)" }}>India · ap-south-1</span>
           </div>
@@ -92,6 +141,7 @@ export function App(): React.ReactElement {
       </aside>
 
       <main className="main">
+        <Boundary key={route.name}>
         {route.name === 'jobs' && <Jobs />}
         {route.name === 'kit' && <Kit jobId={route.jobId} />}
         {route.name === 'resume' && <Resume />}
@@ -101,9 +151,40 @@ export function App(): React.ReactElement {
         {route.name === 'gaps' && <Gaps />}
         {route.name === 'profile' && <Profile />}
         {route.name === 'parse' && <ParseReview />}
+        </Boundary>
       </main>
+      {reauth && (
+        <ReauthPrompt onDone={() => { setReauth(false); void check(); }} onCancel={() => setReauth(false)} />
+      )}
     </div>
   );
+}
+
+/**
+ * One screen crashing must not take the shell with it.
+ *
+ * Without this a single render error unmounts everything and leaves a white
+ * page with the explanation only in the console — indistinguishable, to the
+ * person looking at it, from the app having failed to load at all. Keyed on
+ * the route so navigating away clears the error rather than sticking.
+ */
+class Boundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  override state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error): { error: Error } {
+    return { error };
+  }
+
+  override render(): React.ReactNode {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="note bad">
+        <span className="lbl">This screen stopped working</span>
+        <p>The rest of the app is fine — try another screen, or reload this one.</p>
+        <p className="sub mono">{this.state.error.message}</p>
+      </div>
+    );
+  }
 }
 
 /**

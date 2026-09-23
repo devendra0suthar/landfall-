@@ -7,10 +7,25 @@
  */
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+    /** FR-27: the session is live but the password proof has gone stale. */
+    readonly reauth = false,
+  ) {
     super(message);
   }
 }
+
+/**
+ * Raised when the API says nobody is signed in.
+ *
+ * Dispatched as an event rather than thrown into whichever screen happened to
+ * be loading: a 401 is a fact about the whole app, and every screen catching it
+ * separately is how you get eight different renderings of "signed out".
+ */
+export const SIGNED_OUT = 'landfall:signed-out';
+export const REAUTH = 'landfall:reauth';
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -19,7 +34,20 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const text = await res.text();
   const body = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new ApiError(body.error ?? `request failed (${res.status})`, res.status);
+  if (!res.ok) {
+    const err = new ApiError(
+      body.error ?? `request failed (${res.status})`,
+      res.status,
+      body.reauth === true,
+    );
+    // The shell listens for these. Auth endpoints are exempt: a wrong password
+    // on the sign-in form is that form's business, not a global sign-out.
+    if (res.status === 401 && !path.startsWith('/api/auth/')) {
+      window.dispatchEvent(new CustomEvent(SIGNED_OUT));
+    }
+    if (err.reauth) window.dispatchEvent(new CustomEvent(REAUTH));
+    throw err;
+  }
   return body as T;
 }
 
@@ -394,4 +422,18 @@ export interface SuggestResponse {
   discarded: Discarded[];
   model: string | null;
   bulletsConsidered: number;
+}
+
+
+/* ── accounts (FR-24, FR-27) ── */
+
+export interface Me {
+  candidate: {
+    id: string;
+    email: string;
+    region: string;
+    /** False on a brand-new account, which is sent to the résumé upload. */
+    hasProfile: boolean;
+  } | null;
+  authedAt?: string;
 }

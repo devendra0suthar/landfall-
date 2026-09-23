@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import { readStored } from '../profile/resume-store.js';
 import { UnreadableResume, extractResumeText, parseResume } from '../profile/parse.js';
 
@@ -13,12 +14,12 @@ import { UnreadableResume, extractResumeText, parseResume } from '../profile/par
  */
 
 export async function registerParseRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/api/resume/parse', async (_req, reply) => {
-    const candidate = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-    if (!candidate) return reply.code(409).send({ error: 'no candidate yet' });
+  app.post('/api/resume/parse', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const resume = await prisma.resumeFile.findFirst({
-      where: { candidateId: candidate.id, active: true },
+      where: { candidateId: candidateId, active: true },
       orderBy: { uploadedAt: 'desc' },
     });
     if (!resume) return reply.code(404).send({ error: 'no résumé on file to read' });

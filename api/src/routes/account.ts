@@ -1,6 +1,7 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { requireFreshAuth } from '../auth/session.js';
 import { deleteStored, readStored } from '../profile/resume-store.js';
 import { forgetArchive, readArchive } from '../record/archive.js';
 
@@ -18,12 +19,18 @@ import { forgetArchive, readArchive } from '../record/archive.js';
  * no lawful basis for holding a CV after they withdraw. So it goes with them.
  */
 
-async function currentCandidate(): Promise<{ id: string; email: string } | null> {
-  const c = await prisma.candidate.findFirst({
-    orderBy: { createdAt: 'asc' },
-    select: { id: true, email: true },
-  });
-  return c;
+/**
+ * Export and erasure both move or destroy the whole record, which makes them
+ * the two clearest cases of FR-27's "data leaves or changes" — so both ask for
+ * a recent password proof rather than only a live session.
+ */
+async function freshCandidate(
+  req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<{ id: string; email: string } | null> {
+  const candidateId = await requireFreshAuth(req, reply);
+  if (!candidateId) return null;
+  return prisma.candidate.findUnique({ where: { id: candidateId }, select: { id: true, email: true } });
 }
 
 export async function registerAccountRoutes(app: FastifyInstance): Promise<void> {
@@ -34,9 +41,12 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
    * at endpoints needing this account to still exist is not portable, and the
    * first thing someone does after exporting is often delete.
    */
-  app.get('/api/export', async (_req, reply) => {
-    const candidate = await prisma.candidate.findFirst({
-      orderBy: { createdAt: 'asc' },
+  app.get('/api/export', async (req, reply) => {
+    const who = await freshCandidate(req, reply);
+    if (!who) return reply;
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: who.id },
       include: {
         profile: { include: { roles: { include: { bullets: true } } } },
         resumes: true,
@@ -145,8 +155,8 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
    * action in the product should not be reachable by a mistimed click.
    */
   app.delete('/api/account', async (req, reply) => {
-    const candidate = await currentCandidate();
-    if (!candidate) return reply.code(404).send({ error: 'no candidate yet' });
+    const candidate = await freshCandidate(req, reply);
+    if (!candidate) return reply;
 
     const parsed = z.object({ confirmEmail: z.string().trim() }).safeParse(req.body);
     if (!parsed.success || parsed.data.confirmEmail.toLowerCase() !== candidate.email.toLowerCase()) {

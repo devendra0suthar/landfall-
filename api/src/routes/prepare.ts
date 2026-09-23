@@ -1,31 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import { compilePlan } from '../plan/plan.js';
 import { tailor } from '../resume/tailor.js';
 import { renderResume, resumeFilename } from '../resume/document.js';
 import { loadBank, loadIndexed, loadPosting, loadProfile } from '../profile/load.js';
 import { buildStarter } from '../compose/letter.js';
 
-/**
- * Preparing one application.
- *
- * Three things a candidate needs before they open an employer's form: what we
- * can fill, what the résumé will say, and what only they can answer. Each is
- * computed from stored facts with no model and no browser.
- */
-
-/** The single-candidate stand-in until accounts exist (FR-24). */
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
-
 export async function registerPrepareRoutes(app: FastifyInstance): Promise<void> {
   /** The fill plan: every action, with the source of its value recorded. */
   app.get('/api/jobs/:id/plan', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate profile yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [posting, profile, bank] = await Promise.all([
       loadPosting(id), loadProfile(candidateId), loadBank(candidateId),
@@ -102,8 +89,8 @@ export async function registerPrepareRoutes(app: FastifyInstance): Promise<void>
   /** The tailored résumé, with its working shown. */
   app.get('/api/jobs/:id/resume', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate profile yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [job, profile] = await Promise.all([loadIndexed(id), loadProfile(candidateId)]);
     if (!job) return reply.code(404).send({ error: 'no such job' });
@@ -130,8 +117,8 @@ export async function registerPrepareRoutes(app: FastifyInstance): Promise<void>
    */
   app.get('/api/jobs/:id/letter', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate profile yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [job, profile] = await Promise.all([loadIndexed(id), loadProfile(candidateId)]);
     if (!job) return reply.code(404).send({ error: 'no such job' });
@@ -166,8 +153,8 @@ export async function registerPrepareRoutes(app: FastifyInstance): Promise<void>
   /** The same résumé as the PDF that would actually be attached. */
   app.get('/api/jobs/:id/resume.pdf', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate profile yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [job, profile] = await Promise.all([loadIndexed(id), loadProfile(candidateId)]);
     if (!job) return reply.code(404).send({ error: 'no such job' });

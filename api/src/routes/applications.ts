@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { ApplicationStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import { captureSend, forgetArchive, readArchive } from '../record/archive.js';
 
 /**
@@ -11,11 +12,6 @@ import { captureSend, forgetArchive, readArchive } from '../record/archive.js';
  * it can only record what they say happened — and the record says `submitted`,
  * never `confirmed`, until an employer's own reply says otherwise (FR-22).
  */
-
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
 
 const Patch = z.object({
   status: z.nativeEnum(ApplicationStatus).optional(),
@@ -29,8 +25,8 @@ const FOLLOW_UP_DAYS = 14;
 export async function registerApplicationRoutes(app: FastifyInstance): Promise<void> {
   /** Save a posting into the pipeline. */
   app.post('/api/applications', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const body = z.object({ jobId: z.string().min(1) }).safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'jobId is required' });
@@ -47,9 +43,9 @@ export async function registerApplicationRoutes(app: FastifyInstance): Promise<v
     return reply.code(201).send({ id: row.id, status: row.status });
   });
 
-  app.get('/api/applications', async (_req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+  app.get('/api/applications', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [rows, counts] = await Promise.all([
       prisma.application.findMany({
@@ -96,8 +92,8 @@ export async function registerApplicationRoutes(app: FastifyInstance): Promise<v
   });
 
   app.get('/api/applications/:id', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const row = await prisma.application.findFirst({
@@ -143,8 +139,8 @@ export async function registerApplicationRoutes(app: FastifyInstance): Promise<v
    * re-marking is not re-sending.
    */
   app.patch('/api/applications/:id', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const parsed = Patch.safeParse(req.body ?? {});
@@ -227,8 +223,8 @@ export async function registerApplicationRoutes(app: FastifyInstance): Promise<v
 
   /** The document as it was sent — not as it would be rendered now. */
   app.get('/api/applications/:id/sent', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const row = await prisma.application.findFirst({
@@ -261,8 +257,8 @@ export async function registerApplicationRoutes(app: FastifyInstance): Promise<v
 
   /** Applied, and nothing has moved since. */
   app.get('/api/followups', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const days = Number((req.query as { days?: string }).days ?? FOLLOW_UP_DAYS);
     const before = new Date(Date.now() - days * 86_400_000);
@@ -302,8 +298,8 @@ export async function registerApplicationRoutes(app: FastifyInstance): Promise<v
    * lawful basis for holding a CV after they withdraw (§8).
    */
   app.delete('/api/applications/:id', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const row = await prisma.application.findFirst({

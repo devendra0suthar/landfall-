@@ -1,0 +1,71 @@
+# Landfall on Render — one web service, one Postgres, one origin.
+#
+# The single origin is the point, not a convenience. docs/REQUIREMENTS.md §9
+# commits the front end to relative paths so that which region a candidate
+# reaches is decided by where they loaded the page, never by an API origin
+# compiled into the bundle. `api/src/server.ts` serves `web/dist` from the same
+# process, so that holds in production and there is no CORS to configure.
+#
+# Apply with: Render dashboard → Blueprints → New Blueprint Instance.
+#
+# ── Two things to know before this handles real candidates ──
+#
+# 1. **Uploaded résumés need a disk.** They are written to the filesystem
+#    (LANDFALL_STATE_DIR), and Render's filesystem is ephemeral: every deploy
+#    and every restart wipes it. The database survives, so the app would show a
+#    résumé row whose bytes have gone — the one failure the export path calls a
+#    "quiet lie". The `disk:` block below fixes it and requires a paid instance.
+#    On the free tier, treat uploads as disposable.
+# 2. **The free instance sleeps** after 15 minutes idle and takes ~30s to wake.
+#    Fine for a demo, visible to anyone you send the link to.
+
+services:
+  - type: web
+    name: landfall
+    runtime: node
+    plan: free
+    # Closest region to ap-south-1, which is what the app reports as its home
+    # and what NFR-4's data-residency model assumes.
+    region: singapore
+    buildCommand: corepack enable && pnpm run build
+    startCommand: pnpm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Containers must bind 0.0.0.0; the default stays loopback so a laptop is
+      # never accidentally exposed.
+      - key: HOST
+        value: 0.0.0.0
+      # Render terminates TLS at a proxy. Without this every request appears to
+      # come from the proxy, and the rate limiter becomes one shared bucket for
+      # the entire internet.
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: landfall-db
+          property: connectionString
+      # An honest User-Agent needs a real address behind it (NFR-1, FR-37).
+      - key: LANDFALL_CONTACT
+        sync: false
+      # Résumé files and cached vendor responses. Points at the disk below.
+      - key: LANDFALL_STATE_DIR
+        value: /var/data
+      # Optional — only rewording suggestions need it (FR-48). Set in the
+      # dashboard, never in this file.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+    # Uncomment on a paid instance. Without it, uploads do not survive a deploy.
+    # disk:
+    #   name: landfall-state
+    #   mountPath: /var/data
+    #   sizeGB: 1
+
+databases:
+  - name: landfall-db
+    plan: free
+    region: singapore
+    # Free Postgres on Render expires after 30 days. Take an export before then
+    # (GET /api/export) or move to a paid plan.

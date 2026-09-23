@@ -1,40 +1,46 @@
 # Deploying Landfall
 
-**Status: not yet deployed.** This document is the honest version of what that
-takes, including the two things that must be fixed before this can face the
-public internet at all.
+**Status: ready to deploy, not yet deployed.** Both blockers this document was
+written around are fixed — accounts exist (FR-24, FR-27), and the front end is
+served from the API process on one origin. What is left is §4, which starts with
+a GitHub login only you can do.
 
 ---
 
 ## 1. Two blockers, before anything else
 
-### 1.1 There is no authentication
+### 1.1 ~~There is no authentication~~ — fixed, 2026-09-23
 
-`currentCandidateId()` — in `api/src/routes/*.ts` — returns **the first
-candidate row in the database**. There is no login, no session, no ownership
-check on any endpoint. FR-24 (sign-up), FR-27 (session expiry) are unbuilt.
+Accounts are built. `requireCandidate()` in `api/src/auth/session.ts` is now the
+only way a route learns who is asking, replacing the fifteen copies of
+`currentCandidateId()` that each returned the first row in the database.
 
-On a laptop that is fine: one person, one profile. On a public URL it means
-anyone who finds the address can:
+- **Sign-up and sign-in** (FR-24) — email and password, scrypt-hashed with the
+  cost parameters stored alongside each hash, so they can be raised later
+  without locking every existing account out.
+- **Sessions** are opaque random tokens in an `httpOnly`, `SameSite=Lax` cookie.
+  Only the SHA-256 is stored, so a dump of the `Session` table is a list of
+  expiry dates rather than a set of working credentials. They are revocable,
+  which is what makes FR-26's "delete my account" true rather than decorative.
+- **Re-authentication** (FR-27) — a password proof older than 12 hours is
+  refused at the three points where data leaves or changes: `GET /api/export`,
+  `DELETE /api/account`, `PUT /api/profile`. The front end asks for the password
+  in place rather than dumping someone back at a login screen.
+- **Browsing still needs no account**, exactly as FR-24 says. The job index is
+  public and reports `match: null` when nobody is signed in.
+- **Account enumeration is refused.** Sign-up and sign-in give the same answer
+  whether or not an email exists, the wrong-password path still runs the KDF so
+  both cost the same wall-clock, and `/api/auth/*` is rate limited to 10
+  requests a minute — without which the first two are decoration.
 
-- read the profile — full name, email, phone, home city, work history
-- **download the résumé** (`GET /api/resume` serves the file)
-- edit or delete the profile, and delete the account
-- see every application and its archived documents
+The seeded demo candidate has no password. The first sign-up using that address
+claims the existing row rather than creating a second account, so the seeded
+profile is not stranded.
 
-That is a complete professional identity, which §8 of the requirements calls a
-credential-grade dataset. **Do not deploy this publicly with real data in it
-until accounts exist.** It is not a hardening task that can follow launch; it is
-the reason the launch cannot happen.
-
-Interim options, in order of how much work they are:
-
-| Option | Work | Good enough for |
-|---|---|---|
-| Keep it local (`pnpm dev`) | none | one person, today |
-| Deploy with **no real data** — empty database, demo profile only | none | showing the product |
-| Put the whole thing behind HTTP basic auth at the host | ~an hour | a private demo for a few people |
-| Build real accounts (FR-24, FR-26, FR-27) | days | actual users |
+**What is still not built:** password reset by email (there is no mail sender in
+the product yet), OAuth providers, and any second factor. A forgotten password
+today needs database access. Say that out loud before inviting anyone who is not
+you.
 
 ### 1.2 GitHub Pages cannot host this
 
@@ -74,17 +80,37 @@ Any of these work and have a free tier:
 | **Railway** | Same shape, similar effort |
 | **Fly.io** | More control, regional deploys — which is the one host that matches NFR-4's per-region data residency if that becomes real |
 
-The shape on any of them:
+**`render.yaml` in the repo root is a Blueprint** declaring the web service and
+its Postgres together, so none of the below is assembled by hand any more. What
+it implements:
 
-1. Build: `pnpm install && pnpm --filter ./api exec prisma generate && pnpm --filter ./web build`
-2. Serve `web/dist` as static files from the same Fastify process that serves
-   `/api` — a few lines with `@fastify/static`, and it keeps the single origin.
-3. Migrate: `pnpm db:push` against the managed Postgres.
-4. Environment: `DATABASE_URL`, `PORT`, `LANDFALL_CONTACT`.
+1. Build: `pnpm run build` — install, `prisma generate`, build the front end.
+2. Serve `web/dist` from the same Fastify process that serves `/api`. **Done** —
+   `server.ts` registers `@fastify/static` when a build is present, and falls
+   back to `index.html` for deep links while still 404ing unknown `/api/` paths
+   as JSON.
+3. Migrate: `pnpm run start` runs `prisma migrate deploy` before listening.
+   **Done** — `prisma/migrations/0_init` is a real migration now. `db:push`
+   stays a development convenience; against a live database it silently drops
+   columns.
+4. Environment: `DATABASE_URL`, `PORT`, `HOST=0.0.0.0`, `TRUST_PROXY=true`,
+   `LANDFALL_CONTACT`, and optionally `ANTHROPIC_API_KEY`.
 5. Seed the index: `pnpm ingest -- <board tokens>` then `pnpm forms -- --limit=2000`.
 
-`api/src/server.ts` currently binds `127.0.0.1`. A container needs `0.0.0.0`, or
-nothing outside it can connect — one line, but the kind that costs an evening.
+`api/src/server.ts` binds `127.0.0.1` by default and reads `HOST`; the blueprint
+sets `0.0.0.0`. The safe value stays the default, so a laptop is never exposed by
+accident.
+
+**One caveat configuration does not fix.** Uploaded résumés are written to the
+filesystem, and Render's is ephemeral: every deploy wipes them while the database
+keeps the rows naming them, so the export path would report a file whose bytes
+are gone — precisely the "quiet lie" it was written to avoid. The `disk:` block
+in `render.yaml` fixes it and needs a paid instance. On the free tier, treat
+uploads as disposable.
+
+Two more free-tier facts worth knowing before you send anyone a link: the web
+service sleeps after 15 minutes idle and takes about 30 seconds to wake, and
+free Postgres expires after 30 days.
 
 ---
 
@@ -112,8 +138,26 @@ than by flag.
 
 ## 4. Order of work
 
-1. `gh auth login`, create the private repo, push. CI starts running.
-2. Decide what "deployed" is for: a private demo, or something with real users.
-3. If real users: build accounts first (§1.1). Nothing else is safe.
-4. Single-origin host (§2), managed Postgres, ingest the index.
-5. Only then consider a public URL.
+Steps 1 and 2 are yours — both need a browser login nobody else can do.
+
+1. **`gh auth login`** — interactive, so run it yourself. Then:
+   ```bash
+   gh repo create landfall --private --source=. --remote=origin --push
+   ```
+   CI starts running on that first push.
+2. **Render → Blueprints → New Blueprint Instance**, point it at the repo. It
+   reads `render.yaml` and creates both the web service and the database. Set
+   `LANDFALL_CONTACT` when prompted; set `ANTHROPIC_API_KEY` only if you want
+   rewording suggestions (FR-48 — everything else works without it).
+3. **First deploy runs the migration itself.** The database starts empty, which
+   also means the job index is empty.
+4. **Fill the index**, from the Render shell or locally against `DATABASE_URL`:
+   ```bash
+   pnpm ingest -- stripe gitlab databricks cloudflare
+   pnpm forms -- --limit=2000
+   ```
+5. **Sign up on the live site.** The first account is yours; nothing is stored
+   until one exists.
+
+Before inviting anyone else: there is no password reset (§1.1), and on the free
+tier uploaded résumés do not survive a deploy (§2).

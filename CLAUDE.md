@@ -12,7 +12,7 @@ are in `docs/PROJECT.md`, which amends the spec — read both.
 ## Layout
 
 ```
-api/       Fastify + Prisma. Ingest adapters, plan compiler, records. Everything
+api/       Fastify + Prisma. Auth, ingest adapters, plan compiler, records. Everything
            here is deterministic except src/suggest/, which is the only code in
            the product that calls a model — and is optional (FR-48).
 web/       Vite + React, static build. Talks to the API, renders nothing server-side.
@@ -59,7 +59,16 @@ one is wrong even when it passes review on every other axis.
 6. **`submitted` is not `confirmed`.** `submitted` comes from the candidate's own
    mark; only external evidence makes it `confirmed`. Nothing advances either on
    its own.
-7. **A Kit states what it does not know.** Presenting an unread form as having no
+7. **One way to know who is asking.** `requireCandidate(req, reply)` — or
+   `requireFreshAuth` where data leaves or changes (FR-27) — from
+   `src/auth/session.ts`. Nothing else. This rule exists because the thing it
+   replaced was fifteen hand-copied `currentCandidateId()` helpers that each
+   returned `findFirst()`, and a route that forgets to check must now be a
+   deliberate act rather than a copy-paste. A new endpoint touching candidate
+   data and not calling one of those two is wrong. Browsing the job index is
+   the one deliberate exception (FR-24) and uses `sessionFromRequest`, which
+   may return null.
+8. **A Kit states what it does not know.** Presenting an unread form as having no
    questions, or an unresolved field as resolved, is the worst bug this product
    can ship — it sends someone into an interview unprepared while telling them
    they are ready.
@@ -91,7 +100,10 @@ pnpm dev            api (:5175) and web (:5174) together
 pnpm ingest -- <board-token>   pull a Greenhouse board into the index
 pnpm db:push        apply schema.prisma
 pnpm typecheck      both packages
-pnpm test           22 tests, no network — fixtures in api/test/fixtures/
+pnpm migrate dev --name <x>    a schema change as a real migration
+pnpm build          production build (prisma generate + web)
+pnpm start          migrate deploy, then serve API + web on one origin
+pnpm test           89 tests, no network — fixtures in api/test/fixtures/
 ```
 
 Local Postgres: role `landfall`, database `landfall`, see `api/.env.example`.

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import { gapReport } from '../plan/gaps.js';
 import { loadBank, loadProfile } from '../profile/load.js';
 
@@ -12,15 +13,10 @@ import { loadBank, loadProfile } from '../profile/load.js';
  * stop asking" is actionable; "your profile is 63% complete" is not.
  */
 
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
-
 export async function registerGapRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/api/gaps', async (_req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+  app.get('/api/gaps', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [profile, bank] = await Promise.all([loadProfile(candidateId), loadBank(candidateId)]);
     if (!profile) return reply.code(409).send({ error: 'no candidate profile yet' });
@@ -36,8 +32,8 @@ export async function registerGapRoutes(app: FastifyInstance): Promise<void> {
    * enforce that is the door — not every reader downstream.
    */
   app.put('/api/bank/:labelKey', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const labelKey = decodeURIComponent((req.params as { labelKey: string }).labelKey);
     const body = z.object({ value: z.string().trim().min(1).max(2000) }).safeParse(req.body);
@@ -66,8 +62,8 @@ export async function registerGapRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/api/bank/:labelKey', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const labelKey = decodeURIComponent((req.params as { labelKey: string }).labelKey);
     await prisma.bankAnswer.deleteMany({ where: { candidateId, labelKey } });

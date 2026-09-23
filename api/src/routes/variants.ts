@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 
 /**
  * Targeting variants — one set of facts, aimed different ways.
@@ -23,11 +24,6 @@ import { prisma } from '../lib/db.js';
  * again per variant would be two mechanisms competing to answer one question.
  */
 
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
-
 const Body = z.object({
   name: z.string().trim().min(1).max(60),
   currentTitle: z.string().trim().max(120).nullish(),
@@ -35,9 +31,9 @@ const Body = z.object({
 }).strict();
 
 export async function registerVariantRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/api/variants', async (_req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+  app.get('/api/variants', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const [variants, profile] = await Promise.all([
       prisma.variant.findMany({ where: { candidateId }, orderBy: { name: 'asc' } }),
@@ -59,8 +55,8 @@ export async function registerVariantRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/api/variants', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const parsed = Body.safeParse(req.body);
     if (!parsed.success) {
@@ -102,8 +98,8 @@ export async function registerVariantRoutes(app: FastifyInstance): Promise<void>
    * nothing while the UI says otherwise.
    */
   app.post('/api/variants/select', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const parsed = z.object({ name: z.string().trim().nullable() }).safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'name is required (null to clear)' });
@@ -137,8 +133,8 @@ export async function registerVariantRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.delete('/api/variants/:name', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const name = decodeURIComponent((req.params as { name: string }).name);
     await prisma.variant.deleteMany({ where: { candidateId, name } });

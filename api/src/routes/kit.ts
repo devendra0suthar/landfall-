@@ -1,36 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import { compilePlan } from '../plan/plan.js';
 import { buildKit } from '../kit/kit.js';
 import { tailor } from '../resume/tailor.js';
 import { buildStarter } from '../compose/letter.js';
 import { loadBank, loadIndexed, loadPosting, loadProfile } from '../profile/load.js';
 
-/**
- * The Application Kit endpoint (FR-39 … FR-43).
- *
- * One request, one deliverable. The three older endpoints — /plan, /resume,
- * /letter — each answer a different question about a posting, and a candidate
- * about to apply needs all three at once plus an honest account of what we
- * could not read. Stitching that together in the browser would put the
- * three-state honesty rules in the front end, where each screen would
- * eventually reinvent them slightly differently.
- *
- * Nothing here fetches from the employer (FR-42). The form was read at ingest;
- * everything below is compiled from stored facts.
- */
-
-/** The single-candidate stand-in until accounts exist (FR-24). */
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
-
 export async function registerKitRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/jobs/:id/kit', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate profile yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const job = await prisma.job.findUnique({
       where: { id },

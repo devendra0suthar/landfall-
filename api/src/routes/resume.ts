@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import {
   MAX_BYTES, ResumeRejected, deleteStored, readStored, storeResume,
 } from '../profile/resume-store.js';
@@ -11,11 +12,6 @@ import {
  * field there is: without it the file action on every plan resolves to
  * `unresolved` and readiness stops short no matter how complete the profile is.
  */
-
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
 
 export async function registerResumeRoutes(app: FastifyInstance): Promise<void> {
   // A résumé arrives as bytes, not JSON. Fastify parses application/json by
@@ -30,8 +26,8 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
 
   /** Upload, and make it the one that gets attached. */
   app.post('/api/resume', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const name = String((req.query as { filename?: string }).filename ?? '').trim();
     if (!name) return reply.code(400).send({ error: 'filename query parameter is required' });
@@ -79,9 +75,9 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
   });
 
   /** What is on file, newest first. */
-  app.get('/api/resumes', async (_req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+  app.get('/api/resumes', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const rows = await prisma.resumeFile.findMany({
       where: { candidateId },
@@ -98,9 +94,9 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
   });
 
   /** The active file itself, so a candidate can check what we would attach. */
-  app.get('/api/resume', async (_req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+  app.get('/api/resume', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const row = await prisma.resumeFile.findFirst({
       where: { candidateId, active: true },
@@ -139,8 +135,8 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
    * Idempotent, so a double-click cannot deactivate everything.
    */
   app.post('/api/resume/:id/activate', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const row = await prisma.resumeFile.findFirst({ where: { id, candidateId } });
@@ -182,8 +178,8 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
    * removing theirs must not delete an application's archived attachment.
    */
   app.delete('/api/resume/:id', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const row = await prisma.resumeFile.findFirst({ where: { id, candidateId } });

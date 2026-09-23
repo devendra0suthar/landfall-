@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import { analyseResume } from '../analyze/analyze.js';
 import { extractFacts } from '../jobs/extract.js';
 import { tailor } from '../resume/tailor.js';
@@ -29,11 +30,6 @@ const Body = z.object({
   title: z.string().trim().max(300).optional(),
 });
 
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
-
 export async function registerAnalyzeRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/analyze', async (req, reply) => {
     const parsed = Body.safeParse(req.body ?? {});
@@ -45,8 +41,8 @@ export async function registerAnalyzeRoutes(app: FastifyInstance): Promise<void>
     }
     const { jobDescription, title } = parsed.data;
 
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate profile yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
     const profile = await loadProfile(candidateId);
     if (!profile) return reply.code(409).send({ error: 'no candidate profile yet' });
 

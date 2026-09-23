@@ -1,14 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { requireCandidate } from '../auth/session.js';
 import { modelConfigured, isAuthFailure } from '../lib/claude.js';
 import { suggestRewordings } from '../suggest/suggest.js';
 import { verifyRewording } from '../suggest/verify.js';
 
 /**
  * Proposed rewordings, and the candidate's decision on each one.
- *
- * Three endpoints and a strict division of authority between them:
  *
  *   POST /api/suggest            the model proposes. Writes nothing.
  *   POST /api/bullets/:id/accept the candidate accepts one. Writes.
@@ -27,12 +26,6 @@ import { verifyRewording } from '../suggest/verify.js';
 const NO_CREDENTIALS = 'no model credentials configured on this server';
 const CREDENTIALS_HINT = 'Set ANTHROPIC_API_KEY on the API process. Everything else in '
   + 'Landfall works without it; only rewording suggestions need a model.';
-
-/** The single-candidate stand-in until accounts exist (FR-24). */
-async function currentCandidateId(): Promise<string | null> {
-  const c = await prisma.candidate.findFirst({ orderBy: { createdAt: 'asc' } });
-  return c?.id ?? null;
-}
 
 const SuggestBody = z.object({
   /** Limit to one role. Omitted means every bullet on the profile. */
@@ -60,9 +53,9 @@ export async function registerSuggestRoutes(app: FastifyInstance): Promise<void>
    * and the parse review to do it — this endpoint serves the one screen that
    * needs to address a bullet individually.
    */
-  app.get('/api/suggest/bullets', async (_req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+  app.get('/api/suggest/bullets', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const roles = await prisma.role.findMany({
       where: { profile: { candidateId } },
@@ -88,8 +81,8 @@ export async function registerSuggestRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/api/suggest', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const parsed = SuggestBody.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -132,8 +125,8 @@ export async function registerSuggestRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/api/bullets/:id/accept', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const parsed = AcceptBody.safeParse(req.body);
@@ -171,8 +164,8 @@ export async function registerSuggestRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/api/bullets/:id/revert', async (req, reply) => {
-    const candidateId = await currentCandidateId();
-    if (!candidateId) return reply.code(409).send({ error: 'no candidate yet' });
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
 
     const { id } = req.params as { id: string };
     const bullet = await prisma.bullet.findFirst({

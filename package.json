@@ -14,6 +14,13 @@
     "forms": "pnpm --filter ./api forms",
     "seed": "pnpm --filter ./api seed",
     "test": "pnpm --filter ./api test && pnpm --filter ./extension test",
-    "build:extension": "pnpm --filter ./extension build"
+    "build:extension": "pnpm --filter ./extension build",
+    "build": "pnpm install --frozen-lockfile && pnpm --filter ./api exec prisma generate && pnpm --filter ./web build",
+    "start": "pnpm --filter ./api exec prisma migrate deploy && pnpm --filter ./api start",
+    "migrate": "pnpm --filter ./api exec prisma migrate"
+  },
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=22"
   }
 }

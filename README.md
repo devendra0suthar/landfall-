@@ -57,18 +57,28 @@ on your behalf, or touch a logged-in session. See `docs/PROJECT.md`.
 | Deployment — Render blueprint, real migrations | `render.yaml` + `prisma/migrations/0_init`; see `docs/DEPLOY.md` |
 | …and a test that proves every route is guarded | `api/test/routes-guarded.test.ts` reads the route table and fails naming any endpoint with no auth check — public ones are an explicit, reasoned allowlist |
 | First run — a new account gets an explanation, not eight empty screens | `#/welcome`, shown until a profile exists |
-| Tests — 94, against real captured fixtures | `pnpm test` |
+| Eligibility — the list shows roles you can actually take | `?eligible=true`, on by default. Hides only postings that *demonstrably* exclude you; keeps every undecidable one |
+| Autofill extension — connected by a revocable token | `/api/auth/extension`; the Kit tells you about it at the moment you apply |
+| Tests — 101, against real captured fixtures | `pnpm test` |
 
 ## Running it
 
 ```bash
 pnpm install
-createdb landfall            # or see api/.env.example
-pnpm db:push
-pnpm ingest -- addepar1      # any Greenhouse board token(s)
-pnpm forms -- --limit=400    # read the forms ingest did not ask for
-pnpm dev                     # api on :5175, web on http://localhost:5174
+createdb landfall               # or see api/.env.example
+pnpm migrate deploy             # migrations are the schema of record
+pnpm ingest -- addepar1 stripe  # any Greenhouse board token(s)
+pnpm forms -- --limit=2000      # read the forms ingest did not ask for
+pnpm dev                        # api on :5175, web on http://localhost:5174
 ```
+
+Then sign up at `http://localhost:5174` — the first account is yours, and
+nothing is stored until one exists.
+
+`pnpm db:push` still works for throwaway local experiments, but a schema change
+that is going to live needs `pnpm migrate dev --name <what-changed>`: on a real
+database `db:push` drops columns without asking, and CI fails a schema that its
+migrations do not produce.
 
 **Note for this machine:** Vite binds IPv6 `::1` only, so open
 `http://localhost:5174` — `http://127.0.0.1:5174` will not connect. Rollup's

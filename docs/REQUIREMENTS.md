@@ -106,10 +106,20 @@ table in §1.
 3. **Bot walls are recorded, never evaded.** CAPTCHA, rate limits and IP
    reputation checks end the automated run and hand the session to the candidate.
    We do not solve CAPTCHAs, rotate residential proxies, or spoof fingerprints.
-4. **We prepare; the candidate applies.** Landfall never submits an application,
-   never drives a browser in a candidate's name, and never writes into an
-   employer's form. Reading a posting and its public form is unrestricted;
-   acting on the candidate's behalf is not something we do at all.
+4. **We fill; the candidate submits.** *(Amended 23 Sep 2026 — posture C+.)*
+   Landfall never submits an application and never drives a browser in a
+   candidate's name. Our servers never touch an employer's form at all.
+   The one thing that does is the extension (FR-15), running in the candidate's
+   own browser, in their own session, filling the fields and stopping: the
+   submit button is theirs and there is no code path to press it.
+   The line this draws is **where the writing happens**, not whether any happens.
+   Filling a form in front of the person, from facts they confirmed, is
+   assistance. Submitting from our infrastructure is acting in their name, and
+   it is what gets candidates' accounts restricted — that stays permanently out
+   of scope (§5), along with unattended and cloud-side submission of any kind.
+   The original wording of this principle — "never writes into an employer's
+   form" — described posture C before FR-15 was un-retired, and contradicted the
+   shipped product; `CLAUDE.md` rule 4 has been the operative version since.
 5. **Every handover is archived.** The exact bytes of the document set we gave
    the candidate for a posting are stored and hashed. Three weeks later, "which
    CV did I send them?" has an answer.
@@ -217,6 +227,24 @@ Greenhouse only. One ATS, done completely, is worth more than five done partly.
   credentials configured, the feature is switched off and says so, and every
   other part of Landfall — planning, tailoring, the Kit, letters, scoring —
   continues to work unchanged, because none of them calls a model.
+- **FR-49** The index can be filtered to postings the candidate could actually
+  take, and is by default. The filter is **subtractive and timid**: it removes
+  only postings that can be *demonstrated* to exclude them — a remote role
+  scoped to a country they are not in, an on-site role somewhere else — and
+  keeps every posting it cannot decide, including unstated countries, unstated
+  scopes, and regional labels no geography table here can resolve. A posting
+  wrongly hidden is an opportunity silently deleted, which is worse than one
+  wrongly shown. Where the filter had no basis to act (no country on the
+  profile), the response says so and the screen repeats it, because a filter
+  that quietly does nothing is worse than no filter.
+- **FR-50** The autofill extension authenticates with its own **revocable
+  token**, not the session cookie. It fetches from its own origin, so the cookie
+  is cross-site and `SameSite=Lax` correctly refuses to send it; weakening the
+  cookie for every candidate to suit one client would trade everyone's CSRF
+  protection for one convenience. Tokens are listed with when they were last
+  used, revoked individually, shown exactly once, and revoked in full by a
+  password change. Signing out of a browser does not revoke them.
+
 
 ### Discovery and matching
 

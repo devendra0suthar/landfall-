@@ -92,6 +92,13 @@ table in §1.
 1. **The candidate's words, or nothing.** Tailoring selects and orders the
    bullets they wrote. It never rewrites one and never invents one. Every
    generated document passes a verbatim integrity check before it can be sent.
+   A model may **propose** a rewording of a line the candidate wrote (FR-45) —
+   that is the one place a machine touches their prose, and it is hedged three
+   ways: the proposal is shown beside the original and applied only if they
+   accept it, anything that adds a fact the original does not contain is
+   discarded before they ever see it (FR-46), and an accepted line can be put
+   back (FR-47). Tailoring itself is unchanged by this: by the time a bullet
+   reaches it, the words are the candidate's, whoever first suggested them.
 2. **Attestations and consent are never automated.** "I certify this is true",
    privacy notices, EEO and demographic questions, visa and health declarations
    are always surfaced to the human. Ticking them on someone's behalf is an
@@ -192,6 +199,24 @@ Greenhouse only. One ATS, done completely, is worth more than five done partly.
   percentage of our schema.
 - **FR-6** Sensitive attributes (disability, health, demographics, religion) are
   never stored in the profile, never inferred, and never required.
+- **FR-45** A candidate may ask for a **proposed rewording** of a bullet they
+  wrote. The proposal is presented beside the line it would replace, with one
+  decision per line and no bulk accept. Nothing is stored until they accept, and
+  accepting is recorded as an edit they made to their own profile.
+- **FR-46** A proposal that introduces a fact the original does not contain
+  never reaches the candidate. Numbers, technologies, named entities, and claims
+  of scope or credit are checked mechanically against the source line, and a
+  proposal that adds — or silently drops — one of them is discarded before
+  display. How many were discarded is reported on screen rather than hidden:
+  that count is the only place a change in model behaviour would show.
+- **FR-47** An accepted rewording is reversible. What the candidate originally
+  wrote is retained against the bullet, restorable in one action, and a bullet
+  carries whether a machine shaped its words. A second rewording still reverts
+  to what the candidate wrote, not to the previous machine wording.
+- **FR-48** Suggestions are optional to the deployment. With no model
+  credentials configured, the feature is switched off and says so, and every
+  other part of Landfall — planning, tailoring, the Kit, letters, scoring —
+  continues to work unchanged, because none of them calls a model.
 
 ### Discovery and matching
 

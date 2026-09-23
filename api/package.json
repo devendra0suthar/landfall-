@@ -15,6 +15,7 @@
     "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
     "@prisma/client": "^6.1.0",
     "fastify": "^5.2.0",
     "mammoth": "^1.12.3",

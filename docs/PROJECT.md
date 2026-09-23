@@ -281,6 +281,27 @@ which delete with them cleanly.
    product depends on. §14's Python-service exception stays available but unexercised.
    Recorded as §13.4.
 
+6. **AI rewording: the model proposes on the candidate's own lines, and a verifier
+   stands between it and the CV.** Decided 2026-09-23, resolving the tension §4 left
+   open. jobsuit's tailoring rewrites and invents bullets to insert the keywords a
+   posting asks for; principle 1 forbids exactly that, and the gap had been blocking
+   résumé templates and the chat agent behind it.
+   The resolution is not a compromise between the two. The model gets to change
+   *words* and never *facts*, and that line is drawn mechanically rather than by
+   prompting: `api/src/suggest/verify.ts` rejects any proposal that introduces or
+   drops a number, a technology, a named entity, or a claim of scope or credit, and it
+   does so **before the candidate sees it** — a warning next to an accept button is a
+   warning that gets clicked past. The technology check runs on `termsIn`, the same
+   vocabulary the job extractor and scorer use, so the exact keyword a posting asks
+   for is the exact keyword we can prove was inserted. Keyword stuffing is not
+   discouraged here; it is unrepresentable.
+   Nothing is applied in bulk, an accepted line is reversible, and what the candidate
+   originally wrote is retained. The count of discarded proposals is shown rather than
+   hidden — it is the only place a drift in model behaviour would surface.
+   The feature is optional to the deployment (FR-48): with no credentials it switches
+   off and says so, and the rest of the product stays deterministic and offline.
+   Recorded as FR-45…FR-48.
+
 ---
 
 ## 8. Screens

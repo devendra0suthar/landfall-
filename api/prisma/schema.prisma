@@ -115,6 +115,17 @@ model Bullet {
   text     String
   position Int    @default(0)
 
+  /// What the candidate wrote before they accepted a proposed rewording.
+  ///
+  /// `text` is always the line that goes on the CV, whoever last shaped the
+  /// words — so tailoring, integrity checks and SentRecord are unaffected by
+  /// this pair existing. These two columns only record that a human accepted a
+  /// machine's wording, which makes the change reversible and makes "was any
+  /// of this suggested?" an answerable question. Null on a line they typed,
+  /// and null again after a revert: a bullet with no history is the norm.
+  originalText String?
+  acceptedAt   DateTime?
+
   @@index([roleId])
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Jobs } from './screens/Jobs.js';
 import { Kit } from './screens/Kit.js';
 import { Resume } from './screens/Resume.js';
+import { Improve } from './screens/Improve.js';
 import { Analyze } from './screens/Analyze.js';
 import { Tracker } from './screens/Tracker.js';
 import { Profile } from './screens/Profile.js';
@@ -26,6 +27,7 @@ type Route =
   | { name: 'jobs' }
   | { name: 'kit'; jobId: string }
   | { name: 'resume' }
+  | { name: 'improve' }
   | { name: 'analyze' }
   | { name: 'tracker'; appId?: string }
   | { name: 'gaps' }
@@ -41,6 +43,7 @@ function parse(hash: string): Route {
   if (head === 'prepare' && id) return { name: 'kit', jobId: id };
   if (head === 'tracker') return id ? { name: 'tracker', appId: id } : { name: 'tracker' };
   if (head === 'resume') return { name: 'resume' };
+  if (head === 'improve') return { name: 'improve' };
   if (head === 'analyze') return { name: 'analyze' };
   if (head === 'gaps') return { name: 'gaps' };
   if (head === 'parse') return { name: 'parse' };
@@ -73,6 +76,7 @@ export function App(): React.ReactElement {
             Kit
           </a>
           <a href="#/resume" className={route.name === 'resume' ? 'on' : ''}>Résumé</a>
+          <a href="#/improve" className={route.name === 'improve' ? 'on' : ''}>Improve</a>
           <a href="#/analyze" className={route.name === 'analyze' ? 'on' : ''}>Analysis</a>
           <a href="#/tracker" className={route.name === 'tracker' ? 'on' : ''}>Tracker</a>
           <a href="#/gaps" className={route.name === 'gaps' ? 'on' : ''}>Gaps</a>
@@ -91,6 +95,7 @@ export function App(): React.ReactElement {
         {route.name === 'jobs' && <Jobs />}
         {route.name === 'kit' && <Kit jobId={route.jobId} />}
         {route.name === 'resume' && <Resume />}
+        {route.name === 'improve' && <Improve />}
         {route.name === 'analyze' && <Analyze />}
         {route.name === 'tracker' && <Tracker appId={route.appId} />}
         {route.name === 'gaps' && <Gaps />}

@@ -338,3 +338,60 @@ export interface AnalyzeResponse {
     text: string;
   } | null;
 }
+
+/* ── AI-proposed rewordings (the honest form of keyword insertion) ── */
+
+/**
+ * A bullet, with whether a machine ever shaped its words.
+ *
+ * `originalText` is what the candidate typed before they accepted a proposal,
+ * and it is the whole undo story: non-null means this line can be reverted.
+ */
+export interface EditableBullet {
+  id: string;
+  text: string;
+  originalText: string | null;
+  acceptedAt: string | null;
+}
+
+export interface BulletRole {
+  id: string;
+  title: string;
+  company: string;
+  start: string;
+  end: string | null;
+  bullets: EditableBullet[];
+}
+
+export interface BulletsResponse {
+  /** False when the server has no model credentials. The screen says so. */
+  available: boolean;
+  roles: BulletRole[];
+  bulletCount: number;
+}
+
+export interface Suggestion {
+  bulletId: string;
+  original: string;
+  proposal: string;
+  rationale: string;
+}
+
+export type ObjectionKind =
+  | 'empty' | 'unchanged' | 'new-number' | 'new-technology' | 'new-entity'
+  | 'escalation' | 'dropped-number' | 'dropped-technology' | 'inflated';
+
+export interface Discarded {
+  bulletId: string;
+  original: string;
+  proposal: string;
+  objections: Array<{ kind: ObjectionKind; detail: string }>;
+}
+
+export interface SuggestResponse {
+  suggestions: Suggestion[];
+  /** Proposals the verifier refused. Counted on screen, never hidden. */
+  discarded: Discarded[];
+  model: string | null;
+  bulletsConsidered: number;
+}

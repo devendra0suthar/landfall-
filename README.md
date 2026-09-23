@@ -39,11 +39,14 @@ on your behalf, or touch a logged-in session. See `docs/PROJECT.md`.
 | Export everything, machine-readable | working (`GET /api/export`) |
 | Erasure — rows, files and archives | working (`DELETE /api/account`) |
 | Fill matcher — plan onto a rendered form, two renderings | working (`api/src/fill/match.ts`) — now the Kit's accuracy gate, not an executor's |
-| Tier A extension — fills the employer's form, never submits | built, untested, and **superseded by posture C** (FR-15 retired). To be reworked as a read-only companion or removed — see `docs/PROJECT.md` §7 |
+| Tier A extension — fills the employer's form, never submits | built, **restored under posture C+** (FR-15 un-retired): Landfall fills, the candidate submits. Still **unverified in a real browser** — load `extension/dist/` unpacked to confirm the in-page fill |
 | Application Kit — the posture-C deliverable | working (`/api/jobs/:id/kit`, `#/kit/:id`) — FR-39…FR-43 |
 | Kit on an unreadable form — ships anyway, states the gap | working (FR-43; `fields: null`, never 0) |
 | Kit is the single apply view | the old `Prepare` screen folded into it; `#/prepare/:id` redirects |
-| Tests — 54, against real captured fixtures | `pnpm test` |
+| Résumé rewording — Claude proposes, you accept line by line | working (`POST /api/suggest`, `#/improve`) — FR-45…FR-48 |
+| …and a verifier that refuses invented facts | working (`api/src/suggest/verify.ts`) — a proposal that adds a number, a tool, a name or a claim of credit is discarded before you see it |
+| …optional to the deployment | with no `ANTHROPIC_API_KEY` the feature switches off and says so; nothing else calls a model |
+| Tests — 80, against real captured fixtures | `pnpm test` |
 
 ## Running it
 

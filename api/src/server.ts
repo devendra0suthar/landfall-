@@ -12,6 +12,7 @@ import { registerProfileEditRoutes } from './routes/profile-edit.js';
 import { registerParseRoutes } from './routes/parse.js';
 import { registerVariantRoutes } from './routes/variants.js';
 import { registerAccountRoutes } from './routes/account.js';
+import { registerSuggestRoutes } from './routes/suggest.js';
 
 /**
  * The API.
@@ -41,6 +42,7 @@ await registerProfileEditRoutes(app);
 await registerParseRoutes(app);
 await registerVariantRoutes(app);
 await registerAccountRoutes(app);
+await registerSuggestRoutes(app);
 
 const port = Number(process.env.PORT ?? 5175);
 

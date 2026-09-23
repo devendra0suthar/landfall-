@@ -12,7 +12,9 @@ are in `docs/PROJECT.md`, which amends the spec — read both.
 ## Layout
 
 ```
-api/       Fastify + Prisma. Ingest adapters, plan compiler, records.
+api/       Fastify + Prisma. Ingest adapters, plan compiler, records. Everything
+           here is deterministic except src/suggest/, which is the only code in
+           the product that calls a model — and is optional (FR-48).
 web/       Vite + React, static build. Talks to the API, renders nothing server-side.
 extension/ Tier A autofill, restored 22 Sep 2026 (FR-15). Fills the employer's
            own form in the candidate's session; contains no submit path, and a
@@ -31,7 +33,16 @@ These come from `docs/REQUIREMENTS.md` §3 and are the product. Code that breaks
 one is wrong even when it passes review on every other axis.
 
 1. **Never write a claim on the candidate's behalf.** Tailoring selects and
-   orders bullets they wrote. Any code path that edits bullet text is a bug.
+   orders bullets they wrote. Any code path that edits bullet text *on its own*
+   is a bug. There is exactly one path where a machine's wording can end up in
+   a bullet — `src/suggest/` (FR-45…FR-48) — and it is not an exception to this
+   rule, it is the rule implemented: the model only ever proposes, every
+   proposal is checked by `suggest/verify.ts` for invented numbers, tools,
+   names and claims of credit *before a human sees it*, and the text changes
+   only when the candidate accepts, which makes the edit theirs. Keep those
+   tests. Tailoring itself still never writes, and `integrity.allVerbatim` is
+   still computed against the stored profile — do not "simplify" this by
+   letting a proposal write straight through.
 2. **Never auto-answer an attestation, consent or demographic question.** There
    is no column for one in `schema.prisma`; keep it that way.
 3. **Never evade a bot wall.** CAPTCHA, rate limit or login wall stops the read.

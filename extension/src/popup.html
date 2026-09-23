@@ -3,31 +3,78 @@
   <head>
     <meta charset="utf-8" />
     <style>
-      :root { color-scheme: light dark; }
+      /*
+       * Matched to the web app's language — Inter, the passing cyan, 12px
+       * radii — so the popup reads as the same product rather than a utility
+       * that happens to share a name.
+       *
+       * The cyan here is #0a7288, not the brand #08b7dc. The bright one
+       * measures 2.38:1 on white and fails AA for anything bearing text; the
+       * web app made the same split for the same reason.
+       */
+      :root {
+        color-scheme: light dark;
+        --paper: #f4f7fb;
+        --surface: #ffffff;
+        --ink: #111827;
+        --ink-muted: #5b6b7f;
+        --rule: #e2e9f0;
+        --field-line: #78899b;
+        --deep: #0a7288;
+        --navy: #2d456c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #0b1620; --surface: #132330; --ink: #e8f1f7;
+          --ink-muted: #8ba3b5; --rule: #263c4e; --field-line: #5a7487;
+          --deep: #2fd0f0; --navy: #0a1a26;
+        }
+      }
+      * { box-sizing: border-box; }
       body {
-        margin: 0; width: 360px; font: 13px/1.5 system-ui, sans-serif;
-        background: #edf0f4; color: #0f1a24;
+        margin: 0; width: 380px;
+        font: 13px/1.55 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        background: var(--paper); color: var(--ink);
       }
-      header { background: #0f1a24; color: #fafbfc; padding: 12px 14px; }
-      header strong { font-size: 15px; letter-spacing: -0.02em; }
-      header p { margin: 4px 0 0; font-size: 11px; color: #8296a8; }
-      main { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+      header { background: var(--navy); color: #fff; padding: 13px 15px; }
+      header strong { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+      header p { margin: 3px 0 0; font-size: 11px; color: #a9bdd8; }
+      main { padding: 13px 15px; display: flex; flex-direction: column; gap: 11px; }
       input, button {
-        font: inherit; padding: 7px 9px; border: 1px solid #c6d0da; border-radius: 4px;
-        background: #fafbfc; color: #0f1a24;
+        font: inherit; padding: 9px 11px; border-radius: 8px;
+        border: 1px solid var(--field-line);
+        background: var(--surface); color: var(--ink);
       }
-      button { font-weight: 600; cursor: pointer; }
-      button.p { background: #12556b; border-color: #12556b; color: #fafbfc; }
+      input { width: 100%; }
+      button { font-weight: 600; cursor: pointer; border-radius: 999px; }
+      button.p { background: var(--deep); border-color: var(--deep); color: #fff; }
       button:disabled { opacity: .5; cursor: default; }
-      .row { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #dce3ea; }
+      :where(input, button, summary):focus-visible {
+        outline: 2px solid var(--deep); outline-offset: 2px;
+      }
+      .row {
+        display: flex; gap: 8px; align-items: baseline;
+        padding: 6px 0; border-bottom: 1px solid var(--rule);
+      }
       .chip {
         font: 10px/1 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .07em;
-        padding: 3px 6px; border-radius: 3px; background: #e3e8ee; color: #35485a; white-space: nowrap;
+        padding: 3px 6px; border-radius: 4px; background: var(--rule);
+        color: var(--ink-muted); white-space: nowrap;
       }
-      .ok { background: #d7e9df; color: #1f6b4a; }
-      .warn { background: #f4e5c8; color: #8a5a10; }
-      .bad { background: #f3dad5; color: #9b2c22; }
-      .note { font-size: 12px; color: #35485a; }
+      .ok { background: #e0f5ec; color: #0f7a52; }
+      .warn { background: #fdf1da; color: #8f5c0f; }
+      .bad { background: #fdecea; color: #c0392b; }
+      .note { font-size: 12px; color: #2d3748; }
+      .muted { font-size: 11px; color: var(--ink-muted); }
+      details { border-top: 1px solid var(--rule); padding-top: 9px; }
+      summary { cursor: pointer; font-size: 12px; color: var(--ink-muted); font-weight: 600; }
+      .field { display: flex; flex-direction: column; gap: 4px; margin-top: 9px; }
+      .field span { font-size: 10px; font-weight: 600; text-transform: uppercase;
+                    letter-spacing: .08em; color: var(--ink-muted); }
+      .never {
+        border-top: 1px solid var(--rule); padding-top: 9px;
+        font-size: 11px; color: var(--ink-muted);
+      }
     </style>
   </head>
   <body>
@@ -37,7 +84,36 @@
     </header>
     <main>
       <button id="go" class="p">Fill this form</button>
-      <div id="out" class="note">Open the employer's application form and press Fill. Landfall works out which posting it is from the page you are on.</div>
+      <div id="out" class="note">
+        Open the employer’s application form and press Fill. Landfall works out
+        which posting it is from the page you are on.
+      </div>
+
+      <details id="conn">
+        <summary>Connection</summary>
+        <label class="field">
+          <span>Landfall address</span>
+          <input id="api" type="url" placeholder="https://landfall.onrender.com" />
+        </label>
+        <label class="field">
+          <span>Access token</span>
+          <input id="token" type="password" placeholder="lfx_…" autocomplete="off" />
+        </label>
+        <p class="muted" style="margin: 7px 0 0">
+          Get a token from Landfall → Résumé → Connect the extension. It is shown
+          once. Revoke it there at any time.
+        </p>
+        <div style="display: flex; gap: 8px; margin-top: 9px">
+          <button id="save" class="p" style="flex: 1">Save</button>
+          <button id="forget" style="flex: 1">Disconnect</button>
+        </div>
+        <div id="connOut" class="muted" style="margin-top: 7px"></div>
+      </details>
+
+      <p class="never">
+        This extension has no submit path, and a test enforces that by absence.
+        The submit button is yours.
+      </p>
     </main>
     <script type="module" src="popup.js"></script>
   </body>

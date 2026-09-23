@@ -45,6 +45,8 @@ export interface SessionInfo {
   candidateId: string;
   sessionId: string;
   authedAt: Date;
+  /** "browser" or "extension" — see the schema comment on Session.kind. */
+  kind: string;
 }
 
 /** Mint a session and set the cookie. Returns the token for tests. */
@@ -81,14 +83,35 @@ export async function startSession(
   return token;
 }
 
+/**
+ * The token this request carries, from either place it can come from.
+ *
+ * A browser sends the cookie. The extension cannot: it fetches from its own
+ * origin, and `SameSite=Lax` refuses to send a session cookie cross-site —
+ * which is the CSRF protection doing its job, not an obstacle to route around
+ * by weakening it to `SameSite=None`. So the extension carries a bearer token
+ * it was given explicitly, and the cookie stays strict for everyone.
+ */
+function tokenFrom(req: FastifyRequest): string | null {
+  const header = req.headers.authorization;
+  if (typeof header === 'string' && header.startsWith('Bearer ')) {
+    const bearer = header.slice('Bearer '.length).trim();
+    if (bearer) return bearer;
+  }
+  return req.cookies?.[COOKIE] ?? null;
+}
+
 /** Who is asking, or null. Never throws — an absent session is normal. */
 export async function sessionFromRequest(req: FastifyRequest): Promise<SessionInfo | null> {
-  const token = req.cookies?.[COOKIE];
+  const token = tokenFrom(req);
   if (!token) return null;
 
   const row = await prisma.session.findUnique({
     where: { tokenHash: sha256(token) },
-    select: { id: true, candidateId: true, expiresAt: true, authedAt: true },
+    select: {
+      id: true, candidateId: true, expiresAt: true, authedAt: true,
+      kind: true, lastUsedAt: true,
+    },
   });
   if (!row) return null;
 
@@ -99,7 +122,22 @@ export async function sessionFromRequest(req: FastifyRequest): Promise<SessionIn
     return null;
   }
 
-  return { candidateId: row.candidateId, sessionId: row.id, authedAt: row.authedAt };
+  // "Last used" is worth showing next to a connected extension, but not worth a
+  // write on every autofill. An hour's granularity answers the only question
+  // anyone asks of it — is this one still in use, or can I revoke it?
+  const hourOld = row.lastUsedAt === null || Date.now() - row.lastUsedAt.getTime() > 3_600_000;
+  if (hourOld) {
+    await prisma.session
+      .update({ where: { id: row.id }, data: { lastUsedAt: new Date() } })
+      .catch(() => undefined);
+  }
+
+  return {
+    candidateId: row.candidateId,
+    sessionId: row.id,
+    authedAt: row.authedAt,
+    kind: row.kind,
+  };
 }
 
 /**
@@ -154,16 +192,79 @@ export async function refreshAuth(sessionId: string): Promise<void> {
   await prisma.session.update({ where: { id: sessionId }, data: { authedAt: new Date() } });
 }
 
+/**
+ * Sign out of this browser, and only this browser.
+ *
+ * Scoped to `kind: 'browser'` on purpose. Signing out of a tab must not revoke
+ * the autofill extension — they are separate grants, made separately, and
+ * someone closing a session on a shared computer is not asking to reconnect
+ * their extension afterwards.
+ */
 export async function endSession(req: FastifyRequest, reply: FastifyReply): Promise<void> {
   const session = await sessionFromRequest(req);
-  if (session) {
+  if (session && session.kind === 'browser') {
     await prisma.session.delete({ where: { id: session.sessionId } }).catch(() => undefined);
   }
   reply.clearCookie(COOKIE, { path: '/' });
 }
 
-/** Drop every session for a candidate — used on password change and erasure. */
+/**
+ * Drop every session for a candidate — password change and erasure.
+ *
+ * This one **does** take the extension tokens with it, and that is the point:
+ * a password is changed because it may be known, and a grant that survives it
+ * is a grant the attacker keeps. The caller tells the candidate their extension
+ * will need reconnecting rather than letting them discover it mid-application.
+ */
 export async function endAllSessions(candidateId: string): Promise<number> {
   const { count } = await prisma.session.deleteMany({ where: { candidateId } });
   return count;
+}
+
+/**
+ * A long-lived bearer token for the autofill extension.
+ *
+ * Returned exactly once, at creation. Only its hash is stored, so it cannot be
+ * shown again — which is the point: a token a screen can re-display is a token
+ * sitting in a database somewhere in plain text.
+ *
+ * Deliberately longer-lived than a browser session (a year). It authorises the
+ * same reads the extension needs and nothing else it would not already have,
+ * it is listed and revocable, and an extension that logs the candidate out
+ * every thirty days is an extension they uninstall.
+ */
+export async function createExtensionToken(
+  candidateId: string,
+  label: string | null,
+): Promise<{ token: string; id: string }> {
+  const token = `lfx_${randomBytes(32).toString('base64url')}`;
+  const row = await prisma.session.create({
+    data: {
+      candidateId,
+      tokenHash: sha256(token),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      kind: 'extension',
+      label: label?.slice(0, 80) ?? null,
+    },
+    select: { id: true },
+  });
+  return { token, id: row.id };
+}
+
+export async function listExtensionTokens(candidateId: string): Promise<Array<{
+  id: string; label: string | null; createdAt: Date; lastUsedAt: Date | null; expiresAt: Date;
+}>> {
+  return prisma.session.findMany({
+    where: { candidateId, kind: 'extension' },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, label: true, createdAt: true, lastUsedAt: true, expiresAt: true },
+  });
+}
+
+/** Scoped to the candidate, so an id from elsewhere revokes nothing. */
+export async function revokeExtensionToken(candidateId: string, id: string): Promise<boolean> {
+  const { count } = await prisma.session.deleteMany({
+    where: { id, candidateId, kind: 'extension' },
+  });
+  return count > 0;
 }

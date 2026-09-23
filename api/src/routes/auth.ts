@@ -4,7 +4,9 @@ import { prisma } from '../lib/db.js';
 import { hashPassword, verifyPassword, passwordProblem } from '../auth/password.js';
 import {
   startSession, endSession, endAllSessions, sessionFromRequest, refreshAuth,
+  createExtensionToken, listExtensionTokens, revokeExtensionToken,
 } from '../auth/session.js';
+import { requireCandidate, requireFreshAuth } from '../auth/session.js';
 
 /**
  * Sign-up, sign-in, sign-out (FR-24).
@@ -195,5 +197,54 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     await endAllSessions(session.candidateId);
     await startSession(reply, session.candidateId, req.headers['user-agent'] ?? null);
     return reply.send({ ok: true, otherSessionsEnded: true });
+  });
+  /**
+   * Connect the autofill extension (FR-15).
+   *
+   * Returns the token **once**. Only its hash is stored, so this screen is the
+   * one and only place it is ever readable — a token a page can re-display is
+   * a token held in plain text somewhere.
+   *
+   * Behind requireFreshAuth: handing out a long-lived credential is exactly the
+   * kind of act FR-27 asks for a password before.
+   */
+  app.post('/api/auth/extension', async (req, reply) => {
+    const candidateId = await requireFreshAuth(req, reply);
+    if (!candidateId) return reply;
+
+    const parsed = z.object({ label: z.string().trim().max(80).optional() })
+      .strict().safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'bad body' });
+
+    const existing = await listExtensionTokens(candidateId);
+    // Not a security limit — a hygiene one. Someone who has connected ten
+    // browsers has lost track, and the list is how they revoke.
+    if (existing.length >= 10) {
+      return reply.code(409).send({
+        error: 'ten extensions are already connected — revoke one before adding another',
+      });
+    }
+
+    const { token, id } = await createExtensionToken(candidateId, parsed.data.label ?? null);
+    return reply.send({
+      id,
+      token,
+      note: 'Copy this now. It is not shown again, and it is stored only as a hash.',
+    });
+  });
+
+  app.get('/api/auth/extension', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
+    return reply.send({ tokens: await listExtensionTokens(candidateId) });
+  });
+
+  app.delete('/api/auth/extension/:id', async (req, reply) => {
+    const candidateId = await requireCandidate(req, reply);
+    if (!candidateId) return reply;
+    const { id } = req.params as { id: string };
+    const gone = await revokeExtensionToken(candidateId, id);
+    if (!gone) return reply.code(404).send({ error: 'no such connected extension' });
+    return reply.send({ ok: true });
   });
 }

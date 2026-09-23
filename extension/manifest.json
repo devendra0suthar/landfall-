@@ -2,20 +2,39 @@
   "manifest_version": 3,
   "name": "Landfall — assisted apply",
   "version": "0.1.0",
-  "description": "Fills an employer's own application form from your verified facts. It never submits anything.",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "description": "Fills an employer's own application form from your verified facts, in your own browser. It never submits anything.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
   "host_permissions": [
     "https://boards.greenhouse.io/*",
     "https://job-boards.greenhouse.io/*",
-    "http://127.0.0.1:5175/*"
+    "http://127.0.0.1:5175/*",
+    "http://localhost:5175/*"
   ],
-  "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_popup": "popup.html", "default_title": "Landfall" },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Landfall"
+  },
   "content_scripts": [
     {
-      "matches": ["https://boards.greenhouse.io/*", "https://job-boards.greenhouse.io/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
   ]
 }

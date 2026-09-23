@@ -437,3 +437,18 @@ export interface Me {
   } | null;
   authedAt?: string;
 }
+
+/* ── the autofill extension (FR-15) ── */
+
+export interface ExtensionToken {
+  id: string;
+  label: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+  expiresAt: string;
+}
+
+export interface ExtensionTokenList { tokens: ExtensionToken[] }
+
+/** The token itself appears here once and is never retrievable again. */
+export interface NewExtensionToken { id: string; token: string; note: string }

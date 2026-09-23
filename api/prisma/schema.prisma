@@ -78,6 +78,22 @@ model Session {
   tokenHash String   @unique
   createdAt DateTime @default(now())
   expiresAt DateTime
+
+  /// "browser" for a signed-in tab, "extension" for the autofill companion.
+  ///
+  /// They are the same mechanism — an opaque token, stored only as a hash,
+  /// revocable by deleting a row — but they arrive differently and are revoked
+  /// separately. The extension cannot use the cookie: it fetches from its own
+  /// origin, and `SameSite=Lax` correctly refuses to send a session cookie
+  /// cross-site, which is the protection working rather than a bug to route
+  /// around. So it carries a bearer token instead, and signing out of the web
+  /// app does not silently stop autofill working.
+  kind  String @default("browser")
+  /// Shown when listing connected extensions, so revoking is an informed act.
+  label String?
+  /// Updated at most hourly — enough to say "last used 2 days ago" without a
+  /// write on every autofill.
+  lastUsedAt DateTime?
   /// When the password was last actually proved. FR-27 re-authenticates before
   /// data leaves or changes, and this — not createdAt — is what that is
   /// measured from, so a session kept alive by browsing does not silently

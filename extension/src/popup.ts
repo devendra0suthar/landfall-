@@ -54,6 +54,16 @@ async function run(): Promise<void> {
 
   if (!prepared?.ok) {
     out.innerHTML = row('stopped', 'bad', prepared?.error ?? 'unknown error');
+    // "Not connected" is the one failure the person can fix from this popup,
+    // so open the panel that fixes it rather than describing it and leaving
+    // them to find the disclosure triangle.
+    if (prepared?.needsToken) {
+      const panel = document.getElementById('conn');
+      if (panel instanceof HTMLDetailsElement) {
+        panel.open = true;
+        (document.getElementById('token') as HTMLInputElement | null)?.focus();
+      }
+    }
     button.disabled = false;
     return;
   }
@@ -132,3 +142,89 @@ async function run(): Promise<void> {
 }
 
 $('go').addEventListener('click', () => { void run(); });
+
+/* ── connection settings ───────────────────────────────────────────────────
+ *
+ * The address and the token were both hardcoded — the API at a developer's
+ * loopback port, and no credential at all. That held exactly as long as the
+ * product had no accounts and ran on one machine.
+ *
+ * Saving an address also *requests permission for it*. A Chrome extension
+ * cannot fetch an origin it was not granted, and the failure is a bare
+ * "failed to fetch" that looks identical to the server being down — so the
+ * grant is asked for at the moment the address is typed, where the answer
+ * still makes sense.
+ */
+
+const conn = {
+  api: document.getElementById('api') as HTMLInputElement,
+  token: document.getElementById('token') as HTMLInputElement,
+  save: document.getElementById('save') as HTMLButtonElement,
+  forget: document.getElementById('forget') as HTMLButtonElement,
+  out: document.getElementById('connOut') as HTMLElement,
+  details: document.getElementById('conn') as HTMLDetailsElement,
+};
+
+function say(text: string): void {
+  conn.out.textContent = text;
+}
+
+async function loadSettings(): Promise<void> {
+  const got = await chrome.storage.local.get(['api', 'token']);
+  conn.api.value = typeof got.api === 'string' ? got.api : '';
+  // Never render the token back. Its presence is the only thing worth showing;
+  // a field that redisplays a credential is a credential on a screen.
+  conn.token.value = '';
+  conn.token.placeholder = typeof got.token === 'string' && got.token
+    ? 'connected — leave blank to keep'
+    : 'lfx_…';
+  say(typeof got.token === 'string' && got.token ? 'Connected.' : 'Not connected yet.');
+}
+
+conn.save.addEventListener('click', () => {
+  void (async () => {
+    const api = conn.api.value.trim().replace(/\/+$/, '');
+    const token = conn.token.value.trim();
+
+    if (api && !/^https?:\/\//.test(api)) {
+      say('The address needs to start with http:// or https://');
+      return;
+    }
+
+    if (api) {
+      // Loopback is already in the manifest; anything else has to be granted,
+      // and the prompt must come from this click to count as a user gesture.
+      const pattern = `${api}/*`;
+      const already = await chrome.permissions.contains({ origins: [pattern] })
+        .catch(() => false);
+      if (!already) {
+        const granted = await chrome.permissions.request({ origins: [pattern] })
+          .catch(() => false);
+        if (!granted) {
+          say('Without permission for that address, Landfall cannot be reached from here.');
+          return;
+        }
+      }
+    }
+
+    const patch: Record<string, string> = {};
+    if (api) patch.api = api;
+    if (token) patch.token = token;
+    await chrome.storage.local.set(patch);
+    await loadSettings();
+    say('Saved.');
+  })();
+});
+
+conn.forget.addEventListener('click', () => {
+  void (async () => {
+    await chrome.storage.local.remove(['token']);
+    await loadSettings();
+    // Deliberately only local. Revoking for real happens in Landfall, where the
+    // row is deleted — clearing it here just stops this browser using it, and
+    // saying otherwise would be a false reassurance.
+    say('Forgotten on this browser. Revoke it in Landfall to kill it everywhere.');
+  })();
+});
+
+void loadSettings();

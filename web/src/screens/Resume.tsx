@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
+import { ConnectExtension } from './ConnectExtension.js';
 import type { ResumeList, ResumeRow } from '../api.js';
 
 /**
@@ -239,7 +240,8 @@ export function Resume(): React.ReactElement {
             </div>
           )}
         </State>
-      </div>
+        <ConnectExtension />
+    </div>
     </>
   );
 }

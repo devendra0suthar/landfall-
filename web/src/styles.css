@@ -494,3 +494,29 @@ a:hover { text-decoration-thickness: 2px; }
 .steps { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: var(--s3); }
 .steps li { max-width: 72ch; }
 .steps li strong { display: block; margin-bottom: 2px; }
+
+/* Continue with Google.
+ *
+ * White with a grey border is Google's own required treatment for the light
+ * button — their brand guidelines do not allow recolouring it to match a
+ * product's palette, so this one control deliberately does not use the app's
+ * button colours. The border carries the shape, so it must clear 3:1 (1.4.11),
+ * which --field-line does at 3.59:1. */
+.btn.google {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; text-decoration: none;
+  background: #ffffff; color: #1f1f1f;
+  border: 1px solid var(--field-line); font-weight: 600;
+}
+.btn.google:hover:not(:disabled) { background: #f7f8f9; border-color: var(--ink-muted); }
+.btn.google svg { flex: none; }
+
+/* A rule with a word in it, separating the two ways in. */
+.or {
+  display: flex; align-items: center; gap: var(--s3);
+  color: var(--ink-muted); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.08em; font-weight: 600;
+}
+.or::before, .or::after {
+  content: ""; flex: 1; height: 1px; background: var(--rule);
+}

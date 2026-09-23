@@ -80,6 +80,17 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
 
+      # Google sign-in (FR-24). Optional: without BOTH of these the button is
+      # not rendered and email sign-in is unaffected.
+      #
+      # The redirect URI to register in the Google console is exactly
+      #   <this service's URL>/api/auth/google/callback
+      # and it must match character for character, https included.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
     # Uncomment on a paid instance. Without it, uploads do not survive a deploy.
     # disk:
     #   name: landfall-state

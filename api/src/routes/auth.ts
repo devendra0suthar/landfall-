@@ -7,6 +7,9 @@ import {
   createExtensionToken, listExtensionTokens, revokeExtensionToken,
 } from '../auth/session.js';
 import { requireCandidate, requireFreshAuth } from '../auth/session.js';
+import {
+  googleConfig, newState, authorizeUrl, redirectUri, stateMatches, exchangeCode, STATE_COOKIE,
+} from '../auth/google.js';
 
 /**
  * Sign-up, sign-in, sign-out (FR-24).
@@ -246,5 +249,93 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     const gone = await revokeExtensionToken(candidateId, id);
     if (!gone) return reply.code(404).send({ error: 'no such connected extension' });
     return reply.send({ ok: true });
+  });
+}
+
+/**
+ * Google sign-in (FR-24).
+ *
+ * Separate from `registerAuthRoutes` so it can be registered outside the strict
+ * 10/min auth rate limit: the callback is one hop in a redirect chain the
+ * candidate did not choose the timing of, and rate-limiting it would fail real
+ * sign-ins while doing nothing an attacker cares about — there is no password
+ * here to guess.
+ */
+export async function registerGoogleRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/api/auth/google/available', async () => ({ available: googleConfig() !== null }));
+
+  app.get('/api/auth/google', async (req, reply) => {
+    const cfg = googleConfig();
+    if (!cfg) return reply.code(503).send({ error: 'Google sign-in is not configured on this server' });
+
+    const state = newState();
+    reply.setCookie(STATE_COOKIE, state, {
+      path: '/',
+      httpOnly: true,
+      // Lax, not Strict: the callback arrives as a top-level navigation from
+      // accounts.google.com, and Strict would withhold the cookie exactly then
+      // — the sign-in would fail every time with a state mismatch.
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 600,
+    });
+    return reply.redirect(authorizeUrl(cfg, redirectUri(req as never), state));
+  });
+
+  app.get('/api/auth/google/callback', async (req, reply) => {
+    const cfg = googleConfig();
+    if (!cfg) return reply.code(503).send({ error: 'Google sign-in is not configured on this server' });
+
+    const q = req.query as { code?: string; state?: string; error?: string };
+    // The candidate pressing "cancel" on Google's screen is not an error worth
+    // a stack trace — it is them changing their mind. Send them back.
+    if (q.error) return reply.redirect('/#/?signin=cancelled');
+
+    const expected = req.cookies?.[STATE_COOKIE];
+    reply.clearCookie(STATE_COOKIE, { path: '/' });
+    if (!q.code || !stateMatches(q.state, expected)) {
+      return reply.redirect('/#/?signin=failed');
+    }
+
+    const who = await exchangeCode(cfg, q.code, redirectUri(req as never));
+    if (!who) return reply.redirect('/#/?signin=failed');
+
+    // Matched on `sub` first, because that is the identity. Email is only the
+    // fallback for an account that already existed before Google was linked,
+    // and it is safe here *only* because exchangeCode refuses an unverified
+    // address.
+    let candidate = await prisma.candidate.findUnique({
+      where: { googleId: who.sub },
+      select: { id: true },
+    });
+
+    if (!candidate) {
+      const byEmail = await prisma.candidate.findUnique({
+        where: { email: who.email },
+        select: { id: true, googleId: true },
+      });
+      if (byEmail) {
+        // An existing account, proven to own this verified address. Link it,
+        // unless it is already linked to a different Google account — in which
+        // case something is wrong and the safe answer is to do nothing.
+        if (byEmail.googleId && byEmail.googleId !== who.sub) {
+          return reply.redirect('/#/?signin=failed');
+        }
+        candidate = await prisma.candidate.update({
+          where: { id: byEmail.id },
+          data: { googleId: who.sub },
+          select: { id: true },
+        });
+      } else {
+        candidate = await prisma.candidate.create({
+          data: { email: who.email, googleId: who.sub },
+          select: { id: true },
+        });
+      }
+    }
+
+    await startSession(reply, candidate.id, req.headers['user-agent'] ?? null);
+    // Back to the app, signed in. The hash route is the app's own entry point.
+    return reply.redirect('/#/jobs');
   });
 }

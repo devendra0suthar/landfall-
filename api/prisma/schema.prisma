@@ -48,9 +48,19 @@ model Candidate {
   email     String   @unique
   /// scrypt-derived, with its parameters stored alongside it — see
   /// src/auth/password.ts. Nullable because rows seeded before accounts
-  /// existed have no password and must set one before they can sign in;
+  /// existed have no password and must set one before they can sign in,
+  /// and because an account created through Google never has one;
   /// null never means "any password will do".
   passwordHash String?
+
+  /// Google's `sub` — their immutable account id (FR-24).
+  ///
+  /// Stored rather than matching on email alone, because an email address is
+  /// not an identity: it can be reassigned, and a workspace admin can create
+  /// one that already exists here. `sub` never changes for a Google account
+  /// and never refers to a different person, so it is what a returning sign-in
+  /// is matched on. Unique, so two candidates cannot claim one Google account.
+  googleId String? @unique
   /// Where this candidate's data is stored. A deployment property, not a flag
   /// the candidate can flip (NFR-4).
   region    String   @default("ap-south-1")

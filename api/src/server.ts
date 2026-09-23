@@ -6,7 +6,7 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import { prisma } from './lib/db.js';
-import { registerAuthRoutes } from './routes/auth.js';
+import { registerAuthRoutes, registerGoogleRoutes } from './routes/auth.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerPrepareRoutes, registerTemplateRoutes } from './routes/prepare.js';
 import { registerKitRoutes } from './routes/kit.js';
@@ -73,6 +73,11 @@ await app.register(async (scope) => {
   await scope.register(rateLimit, { max: 20, timeWindow: '1 minute' });
   await registerSuggestRoutes(scope);
 });
+
+// Registered outside the 10/min auth limit on purpose: the callback is one hop
+// in a redirect chain the candidate did not time, and throttling it would fail
+// real sign-ins while stopping nothing — there is no password here to guess.
+await registerGoogleRoutes(app);
 
 app.get('/api/health', async () => {
   const jobs = await prisma.job.count();

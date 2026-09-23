@@ -20,6 +20,10 @@ export function Jobs(): React.ReactElement {
   const [country, setCountry] = useState('');
   const [days, setDays] = useState('');
   const [formOnly, setFormOnly] = useState(false);
+  // On by default. The measured alternative is a candidate in India scrolling
+  // past 1,155 roles that name a country they are not in — and autofilling one
+  // of those is faster waste, not less waste.
+  const [eligibleOnly, setEligibleOnly] = useState(true);
 
   const PAGE = 60;
   const [offset, setOffset] = useState(0);
@@ -29,17 +33,18 @@ export function Jobs(): React.ReactElement {
   if (country) q.set('country', country);
   if (days) q.set('postedWithinDays', days);
   if (formOnly) q.set('formReadable', 'true');
+  if (eligibleOnly) q.set('eligible', 'true');
 
   const { data, error, loading } = useAsync(
     () => api<{
       count: number; total: number; offset: number; hasMore: boolean;
-      scored: boolean; rows: JobRow[];
+      scored: boolean; eligibilityApplied: boolean; rows: JobRow[];
     }>(`/api/jobs?${q.toString()}`),
-    [country, days, formOnly, offset],
+    [country, days, formOnly, eligibleOnly, offset],
   );
 
   // A filter change is a new result set, not more of the old one.
-  useEffect(() => { setOffset(0); setLoaded([]); }, [country, days, formOnly]);
+  useEffect(() => { setOffset(0); setLoaded([]); }, [country, days, formOnly, eligibleOnly]);
 
   useEffect(() => {
     if (!data) return;
@@ -99,6 +104,14 @@ export function Jobs(): React.ReactElement {
             />
             Form readable only
           </label>
+          <label className="sub" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="checkbox"
+              checked={eligibleOnly}
+              onChange={(e) => setEligibleOnly(e.target.checked)}
+            />
+            Only roles I can take
+          </label>
         </div>
       </div>
 
@@ -148,10 +161,28 @@ export function Jobs(): React.ReactElement {
           </State>
         </div>
 
+        {/*
+          * A filter that quietly does nothing is worse than no filter: the
+          * candidate believes they are seeing only roles they can take. The
+          * server reports whether it had a country to work from, and this says
+          * so when it did not.
+          */}
+        {data && eligibleOnly && !data.eligibilityApplied && (
+          <div className="note warn">
+            <span className="lbl">Showing every role, including ones you may not be eligible for</span>
+            <p>
+              Filtering by eligibility needs a country on your profile — without one
+              there is no basis for hiding anything.{' '}
+              <a href="#/profile">Add your country</a>.
+            </p>
+          </div>
+        )}
+
         {data && rows.length > 0 && (
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
             <span className="sub">
               Showing {rows.length.toLocaleString()} of {data.total.toLocaleString()}
+              {eligibleOnly && data.eligibilityApplied ? ' you can take' : ''}
             </span>
             {data.hasMore && (
               <button

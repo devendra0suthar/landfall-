@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { sessionFromRequest } from '../auth/session.js';
+import { eligibilityWhere } from '../jobs/eligibility.js';
 import { loadBank, loadPosting, loadProfile, toIndexed } from '../profile/load.js';
 import { scoreJob } from '../score/score.js';
 import { compilePlan } from '../plan/plan.js';
@@ -21,6 +22,13 @@ const Query = z.object({
   remote: z.enum(['true', 'false']).optional(),
   postedWithinDays: z.coerce.number().int().positive().max(365).optional(),
   formReadable: z.enum(['true', 'false']).optional(),
+  /**
+   * Hide postings that demonstrably exclude this candidate — remote roles
+   * scoped to a country they are not in, and on-site roles somewhere else.
+   * Needs a signed-in profile with a country; without one it does nothing,
+   * because there is no basis on which to hide anything.
+   */
+  eligible: z.enum(['true', 'false']).optional(),
   limit: z.coerce.number().int().positive().max(200).default(50),
   /**
    * Where to start. The index is bigger than one page and was previously
@@ -47,11 +55,19 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
     const session = await sessionFromRequest(req);
     const profile = session ? await loadProfile(session.candidateId) : null;
 
+    // Eligibility can only be applied against a profile with a country on it.
+    // Asking for it without one is not an error — it simply has no basis, and
+    // `eligibilityApplied` in the reply says so rather than letting the screen
+    // claim a filter that did nothing.
+    const eligibility = q.eligible === 'true' && profile ? eligibilityWhere(profile) : {};
+    const eligibilityApplied = Object.keys(eligibility).length > 0;
+
     const where = {
       ...(q.country ? { country: q.country } : {}),
       ...(q.remote ? { remote: q.remote === 'true' } : {}),
       ...(q.formReadable ? { formReadable: q.formReadable === 'true' } : {}),
       ...(since ? { postedAt: { gte: since } } : {}),
+      ...eligibility,
       board: { disabled: false },
     };
 
@@ -85,6 +101,13 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
       // Match needs a profile to compare against. With none, every row says so
       // rather than showing a zero that reads like "bad fit".
       scored: profile !== null,
+      /**
+       * Whether the eligibility filter actually did anything. Asking for it
+       * with no country on the profile is a no-op, and a screen that showed
+       * the toggle as on while every ineligible role stayed in the list would
+       * be lying about what it had filtered.
+       */
+      eligibilityApplied,
       rows: jobs.map((j) => {
         const match = profile
           ? scoreJob(toIndexed(j, j.board.slug), null, profile).match

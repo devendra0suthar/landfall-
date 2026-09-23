@@ -110,6 +110,11 @@ async function writeJob(
       description: facts.summary,
       skills: facts.skills,
       requiredSkills: facts.requiredSkills,
+      // Kept so ranking never has to re-parse the description: 98% of the cost
+      // of ordering the index was re-deriving exactly these three values.
+      level: facts.level,
+      workplace: facts.workplace,
+      yearsRequired: facts.years,
       formReadable: Array.isArray(posting.questions),
       formFetchedAt: Array.isArray(posting.questions) ? new Date() : null,
     },
@@ -124,6 +129,11 @@ async function writeJob(
       description: facts.summary,
       skills: facts.skills,
       requiredSkills: facts.requiredSkills,
+      // Kept so ranking never has to re-parse the description: 98% of the cost
+      // of ordering the index was re-deriving exactly these three values.
+      level: facts.level,
+      workplace: facts.workplace,
+      yearsRequired: facts.years,
       // Never downgrade a form we have already read back to 'unknown'
       // because this pass did not re-fetch it.
       ...(Array.isArray(posting.questions)

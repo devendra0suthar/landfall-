@@ -292,6 +292,14 @@ export interface JobFacts {
   /** Whether a requirements heading was actually found. */
   requirementsFound: boolean;
   level: string | null;
+  /**
+   * The stored scope, when the caller has it.
+   *
+   *  normally reads the summary, which means holding the prose
+   * in memory purely to learn one label. Ingest already computed and stored it,
+   * so a caller with the column can pass it and skip the parse.
+   */
+  remoteScope?: string | null;
   workplace: 'remote' | 'hybrid' | 'onsite' | null;
   years: number | null;
   /** Readable description, truncated. The index does not store full HTML. */

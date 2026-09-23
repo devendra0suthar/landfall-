@@ -73,14 +73,43 @@ export async function rankedJobIds(
   const hit = cache.get(key);
   if (hit) return hit.ids;
 
+  // Only the columns scoring reads — notably NOT `description`. Ranking used to
+  // pull every description and re-run `extractFacts` over it, which measured at
+  // 1,153ms of a 1,180ms ranking: 98% of the work, to recover values that were
+  // already computed once at ingest and thrown away. They are columns now.
   const jobs = await prisma.job.findMany({
     where,
-    include: { board: { select: { slug: true } } },
+    select: {
+      id: true, title: true, location: true, postedAt: true,
+      skills: true, requiredSkills: true,
+      level: true, workplace: true, yearsRequired: true, remoteScope: true,
+    },
   });
 
   const scored = jobs.map((job) => ({
     id: job.id,
-    score: scoreJob(toIndexed(job as never, job.board.slug), null, profile).match.score,
+    score: scoreJob(
+      {
+        id: job.id,
+        title: job.title,
+        location: job.location,
+        facts: {
+          skills: job.skills,
+          requiredSkills: job.requiredSkills,
+          // Ranking compares terms, a level, a year count and a place. It never
+          // reads the prose, so an empty summary costs nothing here — and the
+          // remote scope it would have been parsed for is itself a column.
+          requirementsFound: job.requiredSkills.length > 0,
+          level: job.level,
+          workplace: job.workplace as 'remote' | 'hybrid' | 'onsite' | null,
+          years: job.yearsRequired,
+          summary: '',
+          remoteScope: job.remoteScope,
+        },
+      } as never,
+      null,
+      profile,
+    ).match.score,
     // Ties broken by recency, so an unscored index still reads sensibly and the
     // order is stable rather than whatever the database happened to return.
     posted: job.postedAt ? job.postedAt.getTime() : 0,

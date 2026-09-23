@@ -245,6 +245,22 @@ model Job {
   skills         String[]
   requiredSkills String[]
 
+  /// Facts derived from the posting once, at ingest, rather than every time
+  /// someone looks at a list.
+  ///
+  /// These come out of the same `extractFacts` pass that fills `skills` and
+  /// `requiredSkills`; they were simply not kept, so ranking the index had to
+  /// re-parse every description to get them back. Measured on 2,563 postings:
+  /// re-extraction was 1,153ms of a 1,180ms ranking — 98% of the work — which
+  /// on a small instance made the first page take thirteen seconds.
+  ///
+  /// Nullable because a posting can genuinely state no level and no year
+  /// requirement, and because rows ingested before this existed have none
+  /// until they are backfilled. Null means "not stated", never "zero".
+  level         String?
+  workplace     String?
+  yearsRequired Int?
+
   /// False when the vendor publishes no form schema — Workday, and the 21.7%
   /// of postings that cannot be planned offline at all.
   ///

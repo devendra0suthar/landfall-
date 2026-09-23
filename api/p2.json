@@ -1,0 +1,5 @@
+{"firstName":"Devendra","lastName":"Suthar","email":"devendra@example.com","phone":"+91 98765 43210",
+"location":"Jodhpur, Rajasthan, India","country":"India","currentTitle":"Data Annotator",
+"skills":["python","sql","pandas","excel","data quality","annotation"],"yearsExperience":4,
+"experience":[{"title":"Data Annotator","company":"Clutterbot","start":"2023-06","end":null,
+"bullets":["Labelled 40,000 support tickets and built the taxonomy the analytics team uses.","Automated quality checks in pandas, raising agreement from 0.71 to 0.89."]}]}

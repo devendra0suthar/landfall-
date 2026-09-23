@@ -223,7 +223,11 @@ export function scoreJob(
   // country cannot be placed at all; both keep the credit and say so in the
   // detail rather than guessing. Only a stated COUNTRY that is demonstrably
   // not the candidate's withdraws it.
-  const scope = remote ? remoteScopeOf(job.location ?? '', job.facts.summary ?? '') : null;
+  // The stored column wins: it was computed at ingest from the full description,
+  // which is strictly better evidence than the truncated summary kept here.
+  const scope = !remote
+    ? null
+    : (job.facts.remoteScope ?? remoteScopeOf(job.location ?? '', job.facts.summary ?? ''));
   // Only an explicit COUNTRY can settle scope membership. A city cannot:
   // nothing here knows that Jodhpur is outside the US, and withdrawing the
   // credit on a city that merely failed to match would punish a thin profile

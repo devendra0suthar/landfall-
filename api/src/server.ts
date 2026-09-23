@@ -21,6 +21,7 @@ import { registerParseRoutes } from './routes/parse.js';
 import { registerVariantRoutes } from './routes/variants.js';
 import { registerAccountRoutes } from './routes/account.js';
 import { registerSuggestRoutes } from './routes/suggest.js';
+import { registerRunRoutes } from './routes/run.js';
 
 /**
  * The API, and in production the front end too.
@@ -89,6 +90,7 @@ await registerJobRoutes(app);
 await registerPrepareRoutes(app);
 await registerTemplateRoutes(app);
 await registerKitRoutes(app);
+await registerRunRoutes(app);
 await registerAnalyzeRoutes(app);
 await registerResumeRoutes(app);
 await registerApplicationRoutes(app);

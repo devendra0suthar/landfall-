@@ -457,3 +457,29 @@ export interface NewExtensionToken { id: string; token: string; note: string }
 
 export interface ResumeTemplate { id: string; name: string; suits: string }
 export interface TemplateList { templates: ResumeTemplate[] }
+
+/* ── the run: your next applications, already prepared ── */
+
+export interface RunItem {
+  jobId: string;
+  title: string;
+  company: string;
+  location: string | null;
+  url: string;
+  match: number;
+  prepared: number;
+  yours: number;
+  open: number;
+  /** Null when the form has not been read — never zero. */
+  fields: number | null;
+  applied: boolean;
+}
+
+export interface RunResponse {
+  items: RunItem[];
+  /** Named rather than silently dropped from the count. */
+  couldNotPrepare: Array<{ jobId: string; reason: string }>;
+  requested: number;
+  available: number;
+  totals: { prepared: number; yours: number; open: number };
+}

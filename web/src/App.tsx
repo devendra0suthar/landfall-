@@ -1,5 +1,6 @@
 import { Component, useCallback, useEffect, useState } from 'react';
 import { Jobs } from './screens/Jobs.js';
+import { Run } from './screens/Run.js';
 import { Kit } from './screens/Kit.js';
 import { Resume } from './screens/Resume.js';
 import { Improve } from './screens/Improve.js';
@@ -29,6 +30,9 @@ import type { Me } from './api.js';
 
 type Route =
   | { name: 'jobs' }
+  | { name: 'run' }
+  /** No hash, or one we do not recognise. Resolved per account below. */
+  | { name: 'home' }
   | { name: 'welcome' }
   | { name: 'kit'; jobId: string }
   | { name: 'resume' }
@@ -47,6 +51,7 @@ function parse(hash: string): Route {
   // explanation of why the page they bookmarked is gone.
   if (head === 'prepare' && id) return { name: 'kit', jobId: id };
   if (head === 'tracker') return id ? { name: 'tracker', appId: id } : { name: 'tracker' };
+  if (head === 'run') return { name: 'run' };
   if (head === 'welcome') return { name: 'welcome' };
   if (head === 'resume') return { name: 'resume' };
   if (head === 'improve') return { name: 'improve' };
@@ -54,7 +59,10 @@ function parse(hash: string): Route {
   if (head === 'gaps') return { name: 'gaps' };
   if (head === 'parse') return { name: 'parse' };
   if (head === 'profile') return { name: 'profile' };
-  return { name: 'jobs' };
+  if (head === 'jobs') return { name: 'jobs' };
+  // Anything else — including an empty hash — is 'home', which is resolved
+  // against the account rather than being a screen of its own.
+  return { name: 'home' };
 }
 
 export function App(): React.ReactElement {
@@ -105,13 +113,25 @@ export function App(): React.ReactElement {
   if (!checked) return <div className="gate" aria-busy="true" />;
   if (!me?.candidate) return <SignIn onSignedIn={(m) => { setMe(m); void check(); }} />;
 
-  // A new account would otherwise land on the job list, where every match score
-  // is blank because there is nothing to score against — which reads as broken
-  // rather than empty. Only the default route is redirected, so every screen
-  // stays reachable from the nav and from a link.
-  const view: Route = route.name === 'jobs' && !me.candidate.hasProfile
-    ? { name: 'welcome' }
-    : route;
+  /**
+   * Where signing in actually lands you.
+   *
+   * With no profile: the welcome, because the job list scores everything blank
+   * and reads as broken rather than empty.
+   *
+   * With a profile: the run, not the index. Opening on 2,563 rows makes finding
+   * work the candidate's job, which is the thing they came here to stop doing —
+   * "it's really hard to use, I'm not getting anything" was a fair description
+   * of landing on a search. The run opens on ten applications already prepared.
+   *
+   * Only the default route is redirected, so the index, and every other screen,
+   * stays one click away and every link keeps working.
+   */
+  const view: Route = route.name !== 'home'
+    ? route
+    : me.candidate.hasProfile
+      ? { name: 'run' }
+      : { name: 'welcome' };
 
   return (
     <div className="shell">
@@ -121,6 +141,7 @@ export function App(): React.ReactElement {
           <div className="ticks" aria-hidden="true" />
         </div>
         <nav className="nav">
+          <a href="#/run" className={route.name === 'run' ? 'on' : ''}>Apply</a>
           <a href="#/jobs" className={route.name === 'jobs' ? 'on' : ''}>Jobs</a>
           <a
             href={route.name === 'kit' ? `#/kit/${route.jobId}` : '#/jobs'}
@@ -154,6 +175,7 @@ export function App(): React.ReactElement {
       <main className="main">
         <Boundary key={view.name}>
         {view.name === 'welcome' && <Welcome email={me.candidate.email} />}
+        {view.name === 'run' && <Run />}
         {view.name === 'jobs' && <Jobs />}
         {view.name === 'kit' && <Kit jobId={view.jobId} />}
         {view.name === 'resume' && <Resume />}

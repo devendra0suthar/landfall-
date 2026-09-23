@@ -38,7 +38,7 @@ export function Jobs(): React.ReactElement {
   const { data, error, loading } = useAsync(
     () => api<{
       count: number; total: number; offset: number; hasMore: boolean;
-      scored: boolean; eligibilityApplied: boolean; rows: JobRow[];
+      scored: boolean; eligibilityApplied: boolean; sortedBy: 'match'|'recent'; rows: JobRow[];
     }>(`/api/jobs?${q.toString()}`),
     [country, days, formOnly, eligibleOnly, offset],
   );
@@ -63,14 +63,19 @@ export function Jobs(): React.ReactElement {
   const noResume = resumes.data !== null && resumes.data.count === 0;
 
   /**
-   * Sorting by match is only meaningful once there is a profile to match
-   * against. Without one the API sends null and the column says so.
+   * The server's order, kept exactly.
    *
-   * Sorted over everything loaded so far, not per page: sorting each page
-   * separately would put a 70 from page two below a 20 from page one, which
-   * looks like the ranking is broken.
+   * This used to re-sort the loaded rows by score here, because the API
+   * returned them newest-first and sorting a page at a time put a 70 from page
+   * two below a 20 from page one. That was a patch over the real problem: with
+   * 2,563 eligible roles and a 60-row page, the best matches were not in the
+   * rows the client had, so no amount of client sorting could surface them.
+   *
+   * The ranking is done across the whole result set now (`sort=match`), which
+   * also means re-sorting here would be wrong rather than merely redundant —
+   * someone who asks for newest-first would get it silently re-ordered.
    */
-  const rows = [...loaded].sort((x, y) => (y.match?.score ?? 0) - (x.match?.score ?? 0));
+  const rows = loaded;
 
   return (
     <>
@@ -144,7 +149,9 @@ export function Jobs(): React.ReactElement {
 
         <div className="card">
           <header>
-            <span className="lbl">Role · sorted by match</span>
+            <span className="lbl">
+              Role · {data?.sortedBy === 'match' ? 'best fit first' : 'newest first'}
+            </span>
             <span className="lbl">Match · form</span>
           </header>
           {/* Only the first page gets the skeleton. Once rows are on screen a
@@ -182,6 +189,7 @@ export function Jobs(): React.ReactElement {
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
             <span className="sub">
               Showing {rows.length.toLocaleString()} of {data.total.toLocaleString()}
+              {data.sortedBy === 'match' ? ', best fit first' : ', newest first'}
               {eligibleOnly && data.eligibilityApplied ? ' you can take' : ''}
             </span>
             {data.hasMore && (

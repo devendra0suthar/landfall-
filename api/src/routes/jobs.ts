@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { sessionFromRequest } from '../auth/session.js';
 import { eligibilityWhere } from '../jobs/eligibility.js';
+import { rankedJobIds } from '../jobs/ranking.js';
 import { loadBank, loadPosting, loadProfile, toIndexed } from '../profile/load.js';
 import { scoreJob } from '../score/score.js';
 import { compilePlan } from '../plan/plan.js';
@@ -29,6 +30,11 @@ const Query = z.object({
    * because there is no basis on which to hide anything.
    */
   eligible: z.enum(['true', 'false']).optional(),
+  /**
+   * How to order the page. 'match' needs a profile to compare against, so it
+   * falls back to 'recent' without one rather than pretending to rank.
+   */
+  sort: z.enum(['match', 'recent']).optional(),
   limit: z.coerce.number().int().positive().max(200).default(50),
   /**
    * Where to start. The index is bigger than one page and was previously
@@ -55,6 +61,16 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
     const session = await sessionFromRequest(req);
     const profile = session ? await loadProfile(session.candidateId) : null;
 
+    // The profile's own timestamp, which is what makes caching a ranking safe:
+    // editing a profile is the only thing that can change a score, and it moves
+    // this value, so a stale ranking cannot be served — only evicted.
+    const profileStamp = session
+      ? (await prisma.profile.findUnique({
+        where: { candidateId: session.candidateId },
+        select: { updatedAt: true },
+      }))?.updatedAt.toISOString() ?? null
+      : null;
+
     // Eligibility can only be applied against a profile with a country on it.
     // Asking for it without one is not an error — it simply has no basis, and
     // `eligibilityApplied` in the reply says so rather than letting the screen
@@ -76,19 +92,52 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
     // matched 900 roles and a filter that matched 50 both reported "50" at the
     // default limit, so the number on screen told a candidate nothing about
     // how much they had not seen.
-    const [total, jobs] = await Promise.all([
-      prisma.job.count({ where }),
-      prisma.job.findMany({
+    // Best fit first when there is a profile to fit against. Sorting by date is
+    // the right default for an anonymous visitor and the wrong one for everyone
+    // else: with 2,563 eligible postings and a 60-row page, a newest-first list
+    // buries every good match, and the client re-sorting the rows it happens to
+    // have loaded cannot fix that.
+    const wantMatch = (q.sort ?? (profile ? 'match' : 'recent')) === 'match' && profile !== null;
+
+    const rowInclude = {
+      board: { select: { vendor: true, slug: true } },
+      _count: { select: { questions: true } },
+    };
+
+    let total: number;
+    let jobs: Awaited<ReturnType<typeof prisma.job.findMany<{ include: typeof rowInclude }>>>;
+
+    if (wantMatch && profile) {
+      // The ranking is computed once per profile and filter, then paged. See
+      // jobs/ranking.ts for why it cannot be an ORDER BY.
+      const ranked = await rankedJobIds(
+        session!.candidateId,
+        profile,
+        profileStamp ?? '',
         where,
-        orderBy: [{ postedAt: 'desc' }, { fetchedAt: 'desc' }],
-        skip: q.offset,
-        take: q.limit,
-        include: {
-          board: { select: { vendor: true, slug: true } },
-          _count: { select: { questions: true } },
-        },
-      }),
-    ]);
+      );
+      total = ranked.length;
+      const pageIds = ranked.slice(q.offset, q.offset + q.limit);
+      const rows = pageIds.length === 0 ? [] : await prisma.job.findMany({
+        where: { id: { in: pageIds } },
+        include: rowInclude,
+      });
+      // `IN` returns rows in whatever order it likes, so the ranking is
+      // reapplied here — otherwise the page is sorted and its contents are not.
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      jobs = pageIds.map((id) => byId.get(id)).filter((r): r is typeof rows[number] => r !== undefined);
+    } else {
+      [total, jobs] = await Promise.all([
+        prisma.job.count({ where }),
+        prisma.job.findMany({
+          where,
+          orderBy: [{ postedAt: 'desc' }, { fetchedAt: 'desc' }],
+          skip: q.offset,
+          take: q.limit,
+          include: rowInclude,
+        }),
+      ]);
+    }
 
     return {
       /** Rows on this page. */
@@ -101,6 +150,8 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
       // Match needs a profile to compare against. With none, every row says so
       // rather than showing a zero that reads like "bad fit".
       scored: profile !== null,
+      /** 'match' or 'recent' — so the screen can say how the list is ordered. */
+      sortedBy: wantMatch ? 'match' : 'recent',
       /**
        * Whether the eligibility filter actually did anything. Asking for it
        * with no country on the profile is a no-op, and a screen that showed

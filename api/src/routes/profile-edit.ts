@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { requireFreshAuth } from '../auth/session.js';
+import { forgetRankings } from '../jobs/ranking.js';
 
 /**
  * Editing the verified facts.
@@ -142,7 +143,14 @@ export async function registerProfileEditRoutes(app: FastifyInstance): Promise<v
       return profile;
     });
 
-    // Nothing is cached, so every score is recomputed on the next request.
+    // The ranked job list *is* cached, and these facts are what it was ranked
+    // by. Dropping it here is belt to the braces: the cache key already carries
+    // the profile's updatedAt, so a stale ranking could not be served anyway —
+    // but leaving a dead entry to expire on a timer is how a cache quietly
+    // becomes the reason someone sees yesterday's ordering.
+    forgetRankings(candidateId);
+
+    // Nothing else is cached, so every score is recomputed on the next request.
     // Saying so is the honest version of "changes applied".
     return {
       ok: true,

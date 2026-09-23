@@ -27,7 +27,18 @@ services:
     # Closest region to ap-south-1, which is what the app reports as its home
     # and what NFR-4's data-residency model assumes.
     region: singapore
-    buildCommand: corepack enable && pnpm run build
+    # Do NOT put "corepack enable" here.
+    #
+    # Render's image already ships a pnpm shim at /usr/bin/pnpm, on a read-only
+    # filesystem, and corepack's first act is to unlink it. That fails with
+    # "EROFS: read-only file system, unlink '/usr/bin/pnpm'" and kills the build
+    # in nine seconds, before a line of this project is compiled — which is how
+    # the first two deploys died.
+    #
+    # It is also unnecessary. The lockfile is v9.0, which every recent pnpm
+    # reads, and pnpm 9+ honours the packageManager pin by fetching that exact
+    # version into its own writable cache.
+    buildCommand: pnpm run build
     startCommand: pnpm run start
     healthCheckPath: /api/health
     envVars:

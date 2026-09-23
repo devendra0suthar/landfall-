@@ -3,6 +3,7 @@ import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
 import { ApplyWithExtension } from './ConnectExtension.js';
 import type { ApplicationKit, JobScore, KitFormState, KitQuestion } from '../api.js';
+import type { TemplateList } from '../api.js';
 
 /**
  * The Application Kit — one screen for the whole handover.
@@ -304,6 +305,14 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
  */
 function Resume({ kit, jobId }: { kit: ApplicationKit; jobId: string }): React.ReactElement {
   const [showWorking, setShowWorking] = useState(false);
+  // Remembered per browser, not per posting: someone who prefers one layout
+  // prefers it for every application, and re-choosing it each time is the kind
+  // of small friction that makes a feature feel like a toy.
+  const [template, setTemplate] = useState<string>(
+    () => {
+      try { return localStorage.getItem('landfall:template') ?? 'classic'; } catch { return 'classic'; }
+    },
+  );
 
   return (
     <div className="card flow">
@@ -345,10 +354,12 @@ function Resume({ kit, jobId }: { kit: ApplicationKit; jobId: string }): React.R
         interview.
       </p>
 
+      <TemplatePicker value={template} onChange={setTemplate} />
+
       <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
         <a
           className="btn"
-          href={`/api/jobs/${encodeURIComponent(jobId)}/resume.pdf`}
+          href={`/api/jobs/${encodeURIComponent(jobId)}/resume.pdf?template=${encodeURIComponent(template)}`}
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -612,6 +623,58 @@ function Stat({ n, k, tone }: { n: number; k: string; tone?: 'ok' | 'warn' | 'ba
     <div className="card stat">
       <strong style={{ color: colour }}>{n}</strong>
       <span className="sub">{k}</span>
+    </div>
+  );
+}
+
+/**
+ * Choosing a layout.
+ *
+ * Every option renders the same words from the same facts — they differ in
+ * metrics, alignment and rules, and a test asserts that content is identical
+ * across all of them. So this is genuinely a preference, and it says so rather
+ * than implying that one layout will score better with an employer.
+ *
+ * The list comes from the server so a template added there appears here without
+ * a front-end change.
+ */
+function TemplatePicker({ value, onChange }: {
+  value: string;
+  onChange: (id: string) => void;
+}): React.ReactElement | null {
+  const list = useAsync(() => api<TemplateList>('/api/resume/templates'), []);
+  const templates = list.data?.templates ?? [];
+  if (templates.length < 2) return null;
+
+  const chosen = templates.find((t) => t.id === value) ?? templates[0];
+
+  function pick(id: string): void {
+    onChange(id);
+    // A preference, not data. Losing it costs a click, so browser storage is
+    // the right home for it and a refusal to store is not worth reporting.
+    try { localStorage.setItem('landfall:template', id); } catch { /* private window */ }
+  }
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <span className="lbl">Layout</span>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+        {templates.map((t) => (
+          <button
+            key={t.id}
+            className={t.id === value ? 'btn p' : 'btn'}
+            aria-pressed={t.id === value}
+            onClick={() => pick(t.id)}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+      {chosen && <p className="sub" style={{ marginTop: 6 }}>{chosen.suits}</p>}
+      <p className="sub">
+        Every layout says exactly the same thing — same bullets, same roles, same order.
+        Only the typesetting changes.
+      </p>
     </div>
   );
 }

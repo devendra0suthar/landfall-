@@ -120,6 +120,23 @@ export interface Line {
   spaceBefore?: number;
   /** Indent from the left margin, in points. */
   indent?: number;
+  /**
+   * Centred across the measure. Used by layouts that centre the name block.
+   *
+   * Centring needs the measured width, which is why it lives here rather than
+   * being faked with leading spaces — a space-padded line is a different string
+   * in the PDF, and an employer's ATS reads the string.
+   */
+  align?: 'left' | 'center';
+  /**
+   * Extra space between characters, in points — the PDF `Tc` operator.
+   *
+   * Only applied to short headings that cannot wrap. `wrap()` measures without
+   * it, so a tracked line long enough to break would break in the wrong place.
+   */
+  tracking?: number;
+  /** A hairline rule across the measure, below this line. */
+  ruleBelow?: boolean;
 }
 
 const PAGE_W = 595; // A4 at 72dpi
@@ -170,11 +187,37 @@ export function renderPdf(lines: readonly Line[]): Buffer {
   const contents = pages.map((page) => {
     let out = '';
     for (const line of page) {
+      // A rule can sit under an empty line — a spacer whose only job is the
+      // rule — so the rule is drawn before the early return for empty text.
+      if (line.ruleBelow) {
+        const y = (line.y - line.size * 0.42).toFixed(2);
+        // 0.5pt hairline in mid grey: heavy enough to read on paper, light
+        // enough not to compete with the headings it separates.
+        out += `q 0.5 w 0.62 G ${MARGIN} ${y} m ${(PAGE_W - MARGIN).toFixed(2)} ${y} l S Q${NL}`;
+      }
       if (line.text === '') continue;
+
       const font = line.face === 'bold' ? '/F2' : '/F1';
-      const x = MARGIN + (line.indent ?? 0);
-      out += `BT ${font} ${line.size} Tf 1 0 0 1 ${x.toFixed(2)} ${line.y.toFixed(2)} Tm `
-        + `(${pdfString(line.text)}) Tj ET${NL}`;
+      const indent = line.indent ?? 0;
+      const tracking = line.tracking ?? 0;
+
+      let x = MARGIN + indent;
+      if (line.align === 'center') {
+        const w = widthOf(line.text, line.size, line.face)
+          // Tc adds space after every glyph including the last, so the visible
+          // width is one gap short of the naive sum. Centring without this
+          // correction drifts right by half a gap on a tracked heading.
+          + tracking * Math.max(0, [...line.text].length - 1);
+        x = MARGIN + (MEASURE - w) / 2;
+      }
+
+      out += 'BT ';
+      if (tracking) out += `${tracking.toFixed(2)} Tc `;
+      out += `${font} ${line.size} Tf 1 0 0 1 ${x.toFixed(2)} ${line.y.toFixed(2)} Tm `
+        + `(${pdfString(line.text)}) Tj `;
+      // Reset, or the tracking leaks into every later line on the page.
+      if (tracking) out += '0 Tc ';
+      out += `ET${NL}`;
     }
     return out;
   });

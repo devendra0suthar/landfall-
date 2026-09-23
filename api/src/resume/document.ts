@@ -27,10 +27,95 @@ import type { CandidateProfile } from '../plan/types.js';
  * the candidate's résumé, submitted under their name.
  */
 
-const H1 = 17;
-const H2 = 10.5;
-const BODY = 9.8;
-const SMALL = 8.8;
+/**
+ * Layouts.
+ *
+ * The competitor this answers to advertises 34 templates. Landfall had one, and
+ * the honest reason to add more is not the number: a résumé is read by a person
+ * with a preference and parsed by a machine without one, and the same history
+ * genuinely reads better centred on one page or dense on two.
+ *
+ * What does **not** vary is the content. Every template renders the identical
+ * line set from the identical facts — they differ in metrics, alignment and
+ * rules, never in what is said. A template that dropped a role to fit would be
+ * editing the candidate's history to suit a layout.
+ *
+ * All three stay ATS-safe deliberately: one column, no tables, no text boxes,
+ * no glyphs outside WinAnsi, headings as real text. The designs that lose
+ * people interviews are the two-column ones that parse into interleaved
+ * nonsense, and "it looked good" is no defence when the parser disagrees.
+ */
+export interface TemplateSpec {
+  id: TemplateId;
+  /** Shown in the picker. */
+  name: string;
+  /** Why someone would choose it. */
+  suits: string;
+  h1: number;
+  h2: number;
+  body: number;
+  small: number;
+  /** Name and contact centred rather than ranged left. */
+  centreHeader: boolean;
+  /** A hairline under each section label. */
+  ruleUnderSections: boolean;
+  /** Letter-spacing on section labels, in points. */
+  sectionTracking: number;
+  /** Space above a section label. */
+  sectionGap: number;
+  /** Space above each role heading. */
+  roleGap: number;
+  /** Space above each bullet. */
+  bulletGap: number;
+}
+
+export type TemplateId = 'classic' | 'centred' | 'compact';
+
+export const TEMPLATES: Record<TemplateId, TemplateSpec> = {
+  classic: {
+    id: 'classic',
+    name: 'Classic',
+    suits: 'The default. Ranged left, quiet, reads like a document rather than a design.',
+    h1: 17, h2: 10.5, body: 9.8, small: 8.8,
+    centreHeader: false, ruleUnderSections: false, sectionTracking: 0,
+    sectionGap: 16, roleGap: 11, bulletGap: 4,
+  },
+  centred: {
+    id: 'centred',
+    name: 'Centred',
+    suits: 'A formal header and ruled sections. Suits shorter histories, where the '
+      + 'page has room to breathe.',
+    h1: 19, h2: 10.5, body: 9.8, small: 8.8,
+    centreHeader: true, ruleUnderSections: true, sectionTracking: 1.2,
+    sectionGap: 18, roleGap: 12, bulletGap: 4.5,
+  },
+  compact: {
+    id: 'compact',
+    name: 'Compact',
+    suits: 'Tighter type and spacing, to keep a long history on fewer pages without '
+      + 'dropping anything from it.',
+    h1: 15, h2: 9.8, body: 9.1, small: 8.2,
+    centreHeader: false, ruleUnderSections: true, sectionTracking: 0.8,
+    sectionGap: 12, roleGap: 8, bulletGap: 2.5,
+  },
+};
+
+export const DEFAULT_TEMPLATE: TemplateId = 'classic';
+
+/**
+ * Narrow an untrusted string to a template id, falling back to the default.
+ *
+ * `Object.hasOwn`, not `in`. `in` walks the prototype chain, so `'__proto__'`,
+ * `'toString'` and `'constructor'` all pass it — and `TEMPLATES['__proto__']`
+ * is `Object.prototype`, whose `h1`, `body` and `small` are all `undefined`.
+ * That renders a PDF with `NaN`-sized text from a query string, which is a
+ * corrupt document produced by a link rather than an error anyone would see.
+ */
+export function templateFrom(raw: unknown): TemplateId {
+  return typeof raw === 'string' && Object.hasOwn(TEMPLATES, raw)
+    ? raw as TemplateId
+    : DEFAULT_TEMPLATE;
+}
 
 /** "2023-06" → "Jun 2023". Anything unparseable is passed through verbatim. */
 function month(raw: string | undefined): string {
@@ -71,41 +156,63 @@ function linksLine(p: CandidateProfile): string {
  * Build the line list. Exported so the layout can be asserted on as data,
  * rather than by reading bytes back out of a PDF.
  */
-export function resumeLines(tailored: TailoredResume, profile: CandidateProfile): Line[] {
+export function resumeLines(
+  tailored: TailoredResume,
+  profile: CandidateProfile,
+  templateId: TemplateId = DEFAULT_TEMPLATE,
+): Line[] {
+  const t = TEMPLATES[templateId];
   const lines: Line[] = [];
   const name = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim();
+  const align = t.centreHeader ? 'center' as const : undefined;
 
-  if (name) lines.push({ text: name, size: H1, face: 'bold' });
+  if (name) lines.push({ text: name, size: t.h1, face: 'bold', align });
   if (profile.currentTitle) {
-    lines.push({ text: profile.currentTitle, size: H2, face: 'regular', spaceBefore: 2 });
+    lines.push({ text: profile.currentTitle, size: t.h2, face: 'regular', spaceBefore: 2, align });
   }
   const contact = contactLine(profile);
-  if (contact) lines.push({ text: contact, size: SMALL, face: 'regular', spaceBefore: 5 });
+  if (contact) lines.push({ text: contact, size: t.small, face: 'regular', spaceBefore: 5, align });
   const links = linksLine(profile);
-  if (links) lines.push({ text: links, size: SMALL, face: 'regular', spaceBefore: 1 });
+  if (links) lines.push({ text: links, size: t.small, face: 'regular', spaceBefore: 1, align });
+
+  /** A section label, ruled or not according to the template. */
+  const section = (label: string): Line => ({
+    text: label,
+    size: t.small,
+    face: 'bold',
+    spaceBefore: t.sectionGap,
+    tracking: t.sectionTracking,
+    ruleBelow: t.ruleUnderSections,
+  });
 
   const skills = (profile.skills ?? []).filter((s) => String(s).trim().length > 0);
   if (skills.length > 0) {
-    lines.push({ text: 'SKILLS', size: SMALL, face: 'bold', spaceBefore: 16 });
-    lines.push({ text: skills.join(' · '), size: BODY, face: 'regular', spaceBefore: 4 });
+    lines.push(section('SKILLS'));
+    lines.push({ text: skills.join(' · '), size: t.body, face: 'regular', spaceBefore: 6 });
   }
 
   const roles = tailored.roles.filter((r) => r.kept.length > 0);
   if (roles.length > 0) {
-    lines.push({ text: 'EXPERIENCE', size: SMALL, face: 'bold', spaceBefore: 16 });
+    lines.push(section('EXPERIENCE'));
     for (const role of roles) {
       const heading = [role.title, role.company].filter(Boolean).join(', ');
-      lines.push({ text: heading, size: H2, face: 'bold', spaceBefore: 11 });
+      lines.push({ text: heading, size: t.h2, face: 'bold', spaceBefore: t.roleGap });
 
       const meta = [dateRange(role.start, role.end ?? undefined), role.location ?? '']
         .map((s) => s.trim()).filter((s) => s.length > 0).join('  ·  ');
-      if (meta) lines.push({ text: meta, size: SMALL, face: 'regular', spaceBefore: 2 });
+      if (meta) lines.push({ text: meta, size: t.small, face: 'regular', spaceBefore: 2 });
 
       for (const bullet of role.kept) {
         // The hanging indent is why the marker is drawn as its own line rather
         // than prefixed onto the text: a wrapped bullet lines up under the
         // first word, not under the dash.
-        lines.push({ text: `-  ${bullet.text}`, size: BODY, face: 'regular', spaceBefore: 4, indent: 10 });
+        lines.push({
+          text: `-  ${bullet.text}`,
+          size: t.body,
+          face: 'regular',
+          spaceBefore: t.bulletGap,
+          indent: 10,
+        });
       }
     }
   }
@@ -114,8 +221,12 @@ export function resumeLines(tailored: TailoredResume, profile: CandidateProfile)
 }
 
 /** The tailored résumé as PDF bytes. */
-export function renderResume(tailored: TailoredResume, profile: CandidateProfile): Buffer {
-  return renderPdf(resumeLines(tailored, profile));
+export function renderResume(
+  tailored: TailoredResume,
+  profile: CandidateProfile,
+  templateId: TemplateId = DEFAULT_TEMPLATE,
+): Buffer {
+  return renderPdf(resumeLines(tailored, profile, templateId));
 }
 
 /**

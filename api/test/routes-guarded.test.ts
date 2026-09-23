@@ -33,6 +33,7 @@ const PUBLIC: Record<string, string> = {
   'POST /api/auth/signup': 'the door — creates the account',
   'POST /api/auth/login': 'the door — proves an existing one',
   'GET /api/jobs/resolve': 'employer posting data only; no candidate data is read (FR-24)',
+  'GET /api/resume/templates': 'the list of layout names; depends on nothing about anybody',
 };
 
 /** How the guard may be spelled. `freshCandidate` is account.ts wrapping it. */

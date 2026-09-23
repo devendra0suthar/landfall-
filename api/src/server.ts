@@ -8,7 +8,7 @@ import fastifyStatic from '@fastify/static';
 import { prisma } from './lib/db.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerJobRoutes } from './routes/jobs.js';
-import { registerPrepareRoutes } from './routes/prepare.js';
+import { registerPrepareRoutes, registerTemplateRoutes } from './routes/prepare.js';
 import { registerKitRoutes } from './routes/kit.js';
 import { registerAnalyzeRoutes } from './routes/analyze.js';
 import { registerResumeRoutes } from './routes/resume.js';
@@ -81,6 +81,7 @@ app.get('/api/health', async () => {
 
 await registerJobRoutes(app);
 await registerPrepareRoutes(app);
+await registerTemplateRoutes(app);
 await registerKitRoutes(app);
 await registerAnalyzeRoutes(app);
 await registerResumeRoutes(app);

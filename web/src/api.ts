@@ -452,3 +452,8 @@ export interface ExtensionTokenList { tokens: ExtensionToken[] }
 
 /** The token itself appears here once and is never retrievable again. */
 export interface NewExtensionToken { id: string; token: string; note: string }
+
+/* ── résumé layouts ── */
+
+export interface ResumeTemplate { id: string; name: string; suits: string }
+export interface TemplateList { templates: ResumeTemplate[] }

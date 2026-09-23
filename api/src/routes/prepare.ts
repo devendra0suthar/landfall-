@@ -3,7 +3,7 @@ import { prisma } from '../lib/db.js';
 import { requireCandidate } from '../auth/session.js';
 import { compilePlan } from '../plan/plan.js';
 import { tailor } from '../resume/tailor.js';
-import { renderResume, resumeFilename } from '../resume/document.js';
+import { renderResume, resumeFilename, templateFrom, TEMPLATES } from '../resume/document.js';
 import { loadBank, loadIndexed, loadPosting, loadProfile } from '../profile/load.js';
 import { buildStarter } from '../compose/letter.js';
 
@@ -182,7 +182,12 @@ export async function registerPrepareRoutes(app: FastifyInstance): Promise<void>
       });
     }
 
-    const pdf = renderResume(t, profile);
+    // Every template renders the same lines from the same facts — they differ
+    // in metrics and rules, never in what is said. An unknown id falls back to
+    // the default rather than erroring: a bad link should still hand someone a
+    // résumé.
+    const template = templateFrom((req.query as { template?: string }).template);
+    const pdf = renderResume(t, profile, template);
     return reply
       .code(200)
       .header('content-type', 'application/pdf')
@@ -190,4 +195,21 @@ export async function registerPrepareRoutes(app: FastifyInstance): Promise<void>
       .header('cache-control', 'no-store')
       .send(pdf);
   });
+}
+
+/**
+ * The layouts on offer, as data.
+ *
+ * Registered separately from the résumé routes because a picker needs this
+ * before it has chosen a posting, and it depends on nothing about the
+ * candidate. Public: it is a list of layout names, not anybody's data.
+ */
+export async function registerTemplateRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/api/resume/templates', async () => ({
+    templates: Object.values(TEMPLATES).map((t) => ({
+      id: t.id,
+      name: t.name,
+      suits: t.suits,
+    })),
+  }));
 }

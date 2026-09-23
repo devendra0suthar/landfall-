@@ -4,8 +4,10 @@ A worldwide job-application platform. Upload a résumé once; Landfall finds
 matching roles anywhere, prepares each application from your own facts, and
 hands you everything the form will ask for — with a source on every answer.
 
-**Landfall prepares; you apply.** We do not submit applications, drive a browser
-on your behalf, or touch a logged-in session. See `docs/PROJECT.md`.
+**Landfall fills; you submit.** The extension fills the employer's own form in
+your own browser and stops — it contains no submit path, and a test enforces
+that by absence. Our servers never touch an employer's form, never submit, and
+never act in your name. See `docs/PROJECT.md`.
 
 - **Requirements:** `docs/REQUIREMENTS.md` (14 sections, 48 FRs, 11 NFRs)
 - **Decision record:** `docs/PROJECT.md` — competitive research, and the
@@ -20,9 +22,9 @@ on your behalf, or touch a logged-in session. See `docs/PROJECT.md`.
 
 | | |
 |---|---|
-| Greenhouse ingest → Postgres | working (2,400+ postings across 6 boards, descriptions and skills) |
+| Greenhouse ingest → Postgres | working — **5,398 postings across 21 boards**, descriptions and skills |
 | Form schemas captured | working — `pnpm ingest` reads the first 25 per board, `pnpm forms` backfills the rest |
-| Form coverage | **92% of the index readable** (was 13% — ingest's `FORM_BATCH` cap was never backfilled) |
+| Form coverage | `pnpm forms` backfills what ingest's `FORM_BATCH` cap skipped. Reached **99.2%** on the previous 2,408; re-running across the 15 new boards |
 | `GET /api/jobs`, `/api/jobs/:id` | working, with country/remote/age filters, `offset`/`limit` paging and a true `total` |
 | Profile + answer bank (`pnpm seed`) | working |
 | Fill plan — a source recorded per field | working (`/api/jobs/:id/plan`) |

@@ -7,6 +7,17 @@ import { tailor } from '../resume/tailor.js';
 import { buildStarter } from '../compose/letter.js';
 import { loadBank, loadIndexed, loadPosting, loadProfile } from '../profile/load.js';
 
+/**
+ * Said to a person, not a developer.
+ *
+ * This used to read "run pnpm seed". That was harmless while the only
+ * account was the seeded one on a laptop; the moment sign-up existed it
+ * became the first thing a real candidate saw, telling them to run a build
+ * command. An empty profile is the normal state of a new account, not a
+ * fault, and the message says what to do about it.
+ */
+const NO_PROFILE = 'no profile yet — upload a résumé, or add your work history by hand';
+
 export async function registerKitRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/jobs/:id/kit', async (req, reply) => {
     const { id } = req.params as { id: string };
@@ -38,7 +49,7 @@ export async function registerKitRoutes(app: FastifyInstance): Promise<void> {
       loadPosting(id),
     ]);
 
-    if (!profile) return reply.code(409).send({ error: 'no candidate profile yet' });
+    if (!profile) return reply.code(409).send({ error: NO_PROFILE });
     if (!indexed) return reply.code(404).send({ error: 'no such job' });
 
     const plan = posting ? compilePlan(posting, profile, bank) : null;

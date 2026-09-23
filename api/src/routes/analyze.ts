@@ -9,6 +9,17 @@ import { loadProfile } from '../profile/load.js';
 import type { IndexedJob } from '../jobs/indexer.js';
 
 /**
+ * Said to a person, not a developer.
+ *
+ * This used to read "run pnpm seed". That was harmless while the only
+ * account was the seeded one on a laptop; the moment sign-up existed it
+ * became the first thing a real candidate saw, telling them to run a build
+ * command. An empty profile is the normal state of a new account, not a
+ * fault, and the message says what to do about it.
+ */
+const NO_PROFILE = 'no profile yet — upload a résumé, or add your work history by hand';
+
+/**
  * Analysis against any job description, pasted from anywhere.
  *
  * The limitation this removes: every other screen in Landfall works only on
@@ -44,7 +55,7 @@ export async function registerAnalyzeRoutes(app: FastifyInstance): Promise<void>
     const candidateId = await requireCandidate(req, reply);
     if (!candidateId) return reply;
     const profile = await loadProfile(candidateId);
-    if (!profile) return reply.code(409).send({ error: 'no candidate profile yet' });
+    if (!profile) return reply.code(409).send({ error: NO_PROFILE });
 
     // No description is a valid request: it scores the résumé on its own terms,
     // which is what a candidate wants before they have a specific job in mind.

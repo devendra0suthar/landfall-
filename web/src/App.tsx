@@ -10,6 +10,7 @@ import { Gaps } from './screens/Gaps.js';
 import { ParseReview } from './screens/ParseReview.js';
 import { Aim } from './Aim.js';
 import { SignIn, ReauthPrompt } from './screens/SignIn.js';
+import { Welcome } from './screens/Welcome.js';
 import { api, REAUTH, SIGNED_OUT } from './api.js';
 import type { Me } from './api.js';
 
@@ -28,6 +29,7 @@ import type { Me } from './api.js';
 
 type Route =
   | { name: 'jobs' }
+  | { name: 'welcome' }
   | { name: 'kit'; jobId: string }
   | { name: 'resume' }
   | { name: 'improve' }
@@ -45,6 +47,7 @@ function parse(hash: string): Route {
   // explanation of why the page they bookmarked is gone.
   if (head === 'prepare' && id) return { name: 'kit', jobId: id };
   if (head === 'tracker') return id ? { name: 'tracker', appId: id } : { name: 'tracker' };
+  if (head === 'welcome') return { name: 'welcome' };
   if (head === 'resume') return { name: 'resume' };
   if (head === 'improve') return { name: 'improve' };
   if (head === 'analyze') return { name: 'analyze' };
@@ -102,6 +105,14 @@ export function App(): React.ReactElement {
   if (!checked) return <div className="gate" aria-busy="true" />;
   if (!me?.candidate) return <SignIn onSignedIn={(m) => { setMe(m); void check(); }} />;
 
+  // A new account would otherwise land on the job list, where every match score
+  // is blank because there is nothing to score against — which reads as broken
+  // rather than empty. Only the default route is redirected, so every screen
+  // stays reachable from the nav and from a link.
+  const view: Route = route.name === 'jobs' && !me.candidate.hasProfile
+    ? { name: 'welcome' }
+    : route;
+
   return (
     <div className="shell">
       <aside className="side">
@@ -141,16 +152,17 @@ export function App(): React.ReactElement {
       </aside>
 
       <main className="main">
-        <Boundary key={route.name}>
-        {route.name === 'jobs' && <Jobs />}
-        {route.name === 'kit' && <Kit jobId={route.jobId} />}
-        {route.name === 'resume' && <Resume />}
-        {route.name === 'improve' && <Improve />}
-        {route.name === 'analyze' && <Analyze />}
-        {route.name === 'tracker' && <Tracker appId={route.appId} />}
-        {route.name === 'gaps' && <Gaps />}
-        {route.name === 'profile' && <Profile />}
-        {route.name === 'parse' && <ParseReview />}
+        <Boundary key={view.name}>
+        {view.name === 'welcome' && <Welcome email={me.candidate.email} />}
+        {view.name === 'jobs' && <Jobs />}
+        {view.name === 'kit' && <Kit jobId={view.jobId} />}
+        {view.name === 'resume' && <Resume />}
+        {view.name === 'improve' && <Improve />}
+        {view.name === 'analyze' && <Analyze />}
+        {view.name === 'tracker' && <Tracker appId={view.appId} />}
+        {view.name === 'gaps' && <Gaps />}
+        {view.name === 'profile' && <Profile />}
+        {view.name === 'parse' && <ParseReview />}
         </Boundary>
       </main>
       {reauth && (

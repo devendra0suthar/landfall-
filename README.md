@@ -7,11 +7,13 @@ hands you everything the form will ask for — with a source on every answer.
 **Landfall prepares; you apply.** We do not submit applications, drive a browser
 on your behalf, or touch a logged-in session. See `docs/PROJECT.md`.
 
-- **Requirements:** `docs/REQUIREMENTS.md` (14 sections, 44 FRs, 11 NFRs)
+- **Requirements:** `docs/REQUIREMENTS.md` (14 sections, 48 FRs, 11 NFRs)
 - **Decision record:** `docs/PROJECT.md` — competitive research, and the
   documents-only posture that amends the spec
-- **Prototype:** `design/` — the four core screens, clickable (predates the
-  posture change; the Application Kit screen is not in it yet)
+- **Deployment:** `docs/DEPLOY.md` — and `render.yaml`
+- **Prototype:** `design/` — **historical only.** It predates both the posture
+  change and the visual rebuild, so its screens, typefaces and palette all
+  disagree with the product. The design system is `web/src/styles.css`.
 - **Working rules:** `CLAUDE.md`
 
 ## Status — v0, in progress
@@ -53,7 +55,9 @@ on your behalf, or touch a logged-in session. See `docs/PROJECT.md`.
 | Rate limiting | 10/min on `/api/auth/*`, 20/min on `/api/suggest`, 600/min overall |
 | One origin — API serves the built front end | working (`@fastify/static`), so §9's relative paths hold in production |
 | Deployment — Render blueprint, real migrations | `render.yaml` + `prisma/migrations/0_init`; see `docs/DEPLOY.md` |
-| Tests — 89, against real captured fixtures | `pnpm test` |
+| …and a test that proves every route is guarded | `api/test/routes-guarded.test.ts` reads the route table and fails naming any endpoint with no auth check — public ones are an explicit, reasoned allowlist |
+| First run — a new account gets an explanation, not eight empty screens | `#/welcome`, shown until a profile exists |
+| Tests — 94, against real captured fixtures | `pnpm test` |
 
 ## Running it
 

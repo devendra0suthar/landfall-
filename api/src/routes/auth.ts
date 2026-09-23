@@ -32,6 +32,25 @@ const Credentials = z.object({
 /** Said identically for every failure, so the reply carries no information. */
 const REFUSED = 'that email and password do not match an account';
 
+/**
+ * Whether a row with no password may be claimed by signing up as it.
+ *
+ * `pnpm seed` writes a candidate with `passwordHash: null`, and letting the
+ * first sign-up on that address adopt it is what stops a developer's seeded
+ * profile being stranded the moment accounts arrived. That convenience is also
+ * an account takeover: anyone who knows the address gets the profile, the
+ * résumé and the application history attached to it.
+ *
+ * So it is off in production unless switched on deliberately. A fresh deploy
+ * has no passwordless rows anyway; one only exists if someone ran the seed
+ * against a live database, which is exactly the case that must not be
+ * claimable by a stranger.
+ */
+function claimingAllowed(): boolean {
+  if (process.env.LANDFALL_ALLOW_CLAIM === 'true') return true;
+  return process.env.NODE_ENV !== 'production';
+}
+
 export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/auth/signup', async (req, reply) => {
     const parsed = Credentials.safeParse(req.body);
@@ -52,7 +71,8 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     if (existing) {
       // An account seeded before passwords existed can claim itself by signing
       // up with the same address — it has no password, so no one is displaced.
-      if (existing.passwordHash === null) {
+      // Off in production: see `claimingAllowed`.
+      if (existing.passwordHash === null && claimingAllowed()) {
         await prisma.candidate.update({ where: { id: existing.id }, data: { passwordHash: hash } });
         await startSession(reply, existing.id, req.headers['user-agent'] ?? null);
         return reply.send({ id: existing.id, email, claimed: true });

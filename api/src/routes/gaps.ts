@@ -6,6 +6,17 @@ import { gapReport } from '../plan/gaps.js';
 import { loadBank, loadProfile } from '../profile/load.js';
 
 /**
+ * Said to a person, not a developer.
+ *
+ * This used to read "run pnpm seed". That was harmless while the only
+ * account was the seeded one on a laptop; the moment sign-up existed it
+ * became the first thing a real candidate saw, telling them to run a build
+ * command. An empty profile is the normal state of a new account, not a
+ * fault, and the message says what to do about it.
+ */
+const NO_PROFILE = 'no profile yet — upload a résumé, or add your work history by hand';
+
+/**
  * The answer bank, and what is still missing from it.
  *
  * Answering one recurring question resolves it on every form that asks it, so
@@ -19,7 +30,7 @@ export async function registerGapRoutes(app: FastifyInstance): Promise<void> {
     if (!candidateId) return reply;
 
     const [profile, bank] = await Promise.all([loadProfile(candidateId), loadBank(candidateId)]);
-    if (!profile) return reply.code(409).send({ error: 'no candidate profile yet' });
+    if (!profile) return reply.code(409).send({ error: NO_PROFILE });
 
     return gapReport(profile, bank);
   });

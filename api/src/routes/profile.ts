@@ -3,6 +3,17 @@ import { prisma } from '../lib/db.js';
 import { requireCandidate } from '../auth/session.js';
 
 /**
+ * Said to a person, not a developer.
+ *
+ * This used to read "run pnpm seed". That was harmless while the only
+ * account was the seeded one on a laptop; the moment sign-up existed it
+ * became the first thing a real candidate saw, telling them to run a build
+ * command. An empty profile is the normal state of a new account, not a
+ * fault, and the message says what to do about it.
+ */
+const NO_PROFILE = 'no profile yet — upload a résumé, or add your work history by hand';
+
+/**
  * The verified facts, as the candidate sees them.
  *
  * Read-only for now: editing arrives with the parse-and-correct flow, where a
@@ -33,7 +44,7 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
       prisma.variant.findMany({ where: { candidateId } }),
     ]);
 
-    if (!profile) return reply.code(404).send({ error: 'no profile yet — run pnpm seed' });
+    if (!profile) return reply.code(404).send({ error: NO_PROFILE });
 
     const candidate = await prisma.candidate.findUnique({
       where: { id: candidateId },

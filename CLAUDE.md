@@ -1,7 +1,6 @@
 # Landfall — working rules
 
 A worldwide job-application platform. Requirements: `docs/REQUIREMENTS.md`.
-Interactive prototype of the four screens: `design/Main.dc.html`.
 
 **Posture C+, 22 Sep 2026: Landfall fills; the candidate submits.** The extension
 fills the employer's own form in the candidate's own browser (FR-15) and stops.
@@ -24,7 +23,10 @@ extension/ Tier A autofill, restored 22 Sep 2026 (FR-15). Fills the employer's
 docs/   REQUIREMENTS.md is the spec; PROJECT.md amends it and wins where they
         disagree. Numbered FR-/NFR- ids are referenced in code — retired ids keep
         their numbers and are never reused.
-design/ The prototype canvas (Design Components format). Predates posture C.
+design/ HISTORICAL ONLY. The prototype canvas predates posture C *and* the
+        visual rebuild, so its screens, typefaces and palette all disagree with
+        the product. The design system is web/src/styles.css; the screens that
+        exist are docs/PROJECT.md §8. Do not treat it as a reference.
 ```
 
 ## Rules that are not style preferences
@@ -103,7 +105,7 @@ pnpm typecheck      both packages
 pnpm migrate dev --name <x>    a schema change as a real migration
 pnpm build          production build (prisma generate + web)
 pnpm start          migrate deploy, then serve API + web on one origin
-pnpm test           89 tests, no network — fixtures in api/test/fixtures/
+pnpm test           94 tests, no network — fixtures in api/test/fixtures/
 ```
 
 Local Postgres: role `landfall`, database `landfall`, see `api/.env.example`.

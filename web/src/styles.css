@@ -47,6 +47,16 @@
   --ink-muted: #5b6b7f;
   --rule: #e2e9f0;
   --rule-soft: #eef2f7;
+  /*
+   * The border of a text input, which is a different job from --rule.
+   *
+   * --rule separates things that are already distinguishable by position, so a
+   * hairline is right. An input's border is the only thing saying "type here",
+   * which makes it a UI component boundary under WCAG 1.4.11 and puts a floor
+   * of 3:1 under it. --rule measures 1.22:1 on white and was being used for
+   * both. Measured: 3.59:1 on --surface, 3.34:1 on --paper.
+   */
+  --field-line: #78899b;
 
   /* ── accent: jobsuit's cyan, with navy as the grounding tone ── */
   --brass: #1688ff;          /* kept by name; now the secondary blue */
@@ -104,6 +114,8 @@
     --ink-muted: #8ba3b5;
     --rule: #263c4e;
     --rule-soft: #1d2f3e;
+    /* 3.27:1 on --surface, 3.72:1 on --paper. */
+    --field-line: #5a7487;
 
     --brass: #6fb2ff;
     --brass-soft: #14293f;
@@ -125,6 +137,15 @@
     --nav-tick: #26485e;
 
     --row-sel: #16303f;
+    /*
+     * The ring must be overridden here, not inherited.
+     *
+     * Light mode's #0a7288 was chosen against white; on the dark surface it
+     * measures 2.88:1, under 1.4.11's 3:1 — and the focus ring is the entire
+     * keyboard affordance, so failing it in one theme means the app cannot be
+     * navigated without a mouse there. Same shade as dark --deep: 8.70:1.
+     */
+    --ring: #2fd0f0;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.28);
     --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 36px rgb(0 0 0 / 0.36);
   }
@@ -258,7 +279,7 @@ a:hover { text-decoration-thickness: 2px; }
 .filters { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
 .filters select, .filters input {
   font-family: inherit; font-size: 0.88rem; padding: 8px 12px; min-height: 38px;
-  border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  border: 1px solid var(--field-line); border-radius: var(--radius-sm);
   background: var(--surface); color: var(--ink);
 }
 
@@ -447,10 +468,10 @@ a:hover { text-decoration-thickness: 2px; }
 .field { display: flex; flex-direction: column; gap: var(--s1); }
 .field input {
   font-family: inherit; font-size: 0.95rem; padding: 10px 12px; min-height: 42px;
-  border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  border: 1px solid var(--field-line); border-radius: var(--radius-sm);
   background: var(--surface); color: var(--ink);
 }
-.field input:hover { border-color: var(--ink-muted); }
+.field input:hover { border-color: var(--deep); }
 
 /* A button that reads as a link — for the one-word action inside a sentence,
  * where a pill would be louder than the sentence around it. */
@@ -460,7 +481,9 @@ a:hover { text-decoration-thickness: 2px; }
 }
 .btn.linkish:hover:not(:disabled) { background: none; border-color: transparent; }
 .btn.navlink { color: var(--nav-fg-dim); align-self: flex-start; font-size: 0.78rem; }
-.btn.navlink:hover:not(:disabled) { color: var(--nav-on); }
+/* --nav-on is the hover BACKGROUND of a nav item, not a text colour; using it
+ * here put the label at 1.29:1 on the sidebar. */
+.btn.navlink:hover:not(:disabled) { color: var(--nav-fg); }
 
 @media (prefers-reduced-motion: reduce) {
   .gate-over { backdrop-filter: none; }

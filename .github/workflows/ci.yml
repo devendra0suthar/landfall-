@@ -1,7 +1,8 @@
 name: ci
 
-# Typecheck and test every push. Both gates are the ones CLAUDE.md requires
-# before anything is called done, so they belong here rather than in a habit.
+# Typecheck, test and build every push. All three gates are the ones CLAUDE.md
+# requires before anything is called done, so they belong here rather than in a
+# habit.
 on:
   push:
     branches: [master, main]
@@ -10,12 +11,31 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    # Only the migration check below needs this. The test suite deliberately
+    # does not: it runs on captured fixtures with no database and no network,
+    # which is what lets it gate every push.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shadow
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
+      # No `version:` here on purpose. package.json carries a `packageManager`
+      # field, and this action fails with "Multiple versions of pnpm specified"
+      # when it is given a second answer — a first-push CI failure that has
+      # nothing to do with the code.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -32,7 +52,34 @@ jobs:
       - run: pnpm typecheck
 
       # No database and no network: the suite runs against captured fixtures,
-      # which is why it can gate every push rather than a nightly.
+      # which is why it can gate every push rather than a nightly. It includes
+      # routes-guarded.test.ts, so an endpoint that forgets to authenticate
+      # fails here rather than in production.
       - run: pnpm test
 
+      # Browser automation does not work on the machine this is developed on, so
+      # the front end is never seen by a test. These are the two failures that
+      # costs the most: a class the CSS does not define, and a colour pair that
+      # fails WCAG — NFR-5 commits to AA, and this is the part a machine can hold.
+      - run: pnpm --filter ./web check:design
+
+      # The deploy builds the front end, so a break in it would otherwise first
+      # appear on the host rather than on the commit that caused it.
+      - run: pnpm --filter ./web build
+
       - run: pnpm build:extension
+
+      # The migrations are the schema of record now that `db:push` is only a
+      # development convenience. This fails when someone edits schema.prisma
+      # and pushes without generating a migration — which otherwise surfaces as
+      # a missing column in production, long after the commit that caused it.
+      #
+      # `--exit-code` returns 2 when there is a difference, so a drifted schema
+      # fails the job rather than printing a diff nobody reads.
+      - name: migrations produce the schema
+        run: >
+          pnpm --filter ./api exec prisma migrate diff
+          --from-migrations ./prisma/migrations
+          --to-schema-datamodel ./prisma/schema.prisma
+          --shadow-database-url postgresql://postgres:postgres@localhost:5432/shadow
+          --exit-code

@@ -151,3 +151,61 @@ export function ConnectExtension(): React.ReactElement {
     </div>
   );
 }
+
+/**
+ * The handoff, shown on the Kit where the decision to apply is actually made.
+ *
+ * The two halves of this product were disconnected at the one point they meet.
+ * The Kit told people to "paste your answers" — while the extension that fills
+ * the same form in one click went unmentioned on the screen where they were
+ * about to apply. A feature nobody is told about at the moment they need it is
+ * a feature that does not exist.
+ *
+ * It only appears for a form we can actually fill. Offering one-click autofill
+ * against a form Landfall could not read would be a promise broken on the
+ * click, which is worse than not offering it.
+ */
+export function ApplyWithExtension({ formState, url }: {
+  formState: 'readable' | 'unread' | 'unpublished';
+  url: string;
+}): React.ReactElement | null {
+  const tokens = useAsync(() => api<ExtensionTokenList>('/api/auth/extension'), []);
+  if (formState !== 'readable') return null;
+
+  // Undecided while loading: showing "not connected" and then flipping to
+  // "connected" is a worse first impression than showing nothing for a moment.
+  const connected = tokens.data ? tokens.data.tokens.length > 0 : null;
+
+  return (
+    <div className="card flow">
+      <header><span className="lbl">Applying</span></header>
+      {connected === false ? (
+        <>
+          <p>
+            <strong>Landfall can fill this form for you.</strong> The extension fills the
+            employer’s own form in your own browser — every answer below, typed in for you —
+            and stops. You read it over and press submit.
+          </p>
+          <div className="row split">
+            <span className="sub">It needs connecting once.</span>
+            <a className="btn p" href="#/resume">Connect the extension</a>
+          </div>
+        </>
+      ) : (
+        <>
+          <p>
+            <strong>Open the form, then click the Landfall extension.</strong> It fills
+            every prepared answer below and attaches your résumé. Nothing is submitted —
+            check it over and press their submit button yourself.
+          </p>
+          <div className="row split">
+            <span className="sub">Anything marked “yours” below is still yours to answer.</span>
+            <a className="btn p" href={url} target="_blank" rel="noreferrer">
+              Open their form ↗
+            </a>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

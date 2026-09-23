@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
+import { ApplyWithExtension } from './ConnectExtension.js';
 import type { ApplicationKit, JobScore, KitFormState, KitQuestion } from '../api.js';
 
 /**
@@ -249,6 +250,8 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
               )}
 
               <Resume kit={k} jobId={jobId} />
+              <ApplyWithExtension formState={k.form.state} url={k.job.url} />
+
               <Letter kit={k} />
 
               <div className="card flow">

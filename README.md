@@ -22,9 +22,9 @@ never act in your name. See `docs/PROJECT.md`.
 
 | | |
 |---|---|
-| Greenhouse ingest → Postgres | working — **5,398 postings across 21 boards**, descriptions and skills |
+| Greenhouse ingest → Postgres | working — **5,402 postings across 21 boards**, descriptions and skills |
 | Form schemas captured | working — `pnpm ingest` reads the first 25 per board, `pnpm forms` backfills the rest |
-| Form coverage | `pnpm forms` backfills what ingest's `FORM_BATCH` cap skipped. Reached **99.2%** on the previous 2,408; re-running across the 15 new boards |
+| Form coverage | **99.6% of the index readable** — 5,382 of 5,402, **85,775 form questions stored**. 0 postings publish no form; the 20 unreachable stay `unknown` and are retried |
 | `GET /api/jobs`, `/api/jobs/:id` | working, with country/remote/age filters, `offset`/`limit` paging and a true `total` |
 | Profile + answer bank (`pnpm seed`) | working |
 | Fill plan — a source recorded per field | working (`/api/jobs/:id/plan`) |
@@ -59,9 +59,10 @@ never act in your name. See `docs/PROJECT.md`.
 | Deployment — Render blueprint, real migrations | `render.yaml` + `prisma/migrations/0_init`; see `docs/DEPLOY.md` |
 | …and a test that proves every route is guarded | `api/test/routes-guarded.test.ts` reads the route table and fails naming any endpoint with no auth check — public ones are an explicit, reasoned allowlist |
 | First run — a new account gets an explanation, not eight empty screens | `#/welcome`, shown until a profile exists |
-| Eligibility — the list shows roles you can actually take | `?eligible=true`, on by default. Hides only postings that *demonstrably* exclude you; keeps every undecidable one |
+| Eligibility — the list shows roles you can actually take | `?eligible=true`, on by default. Measured: 5,402 indexed → **2,563 eligible → 2,550 autofillable**. Hides only postings that *demonstrably* exclude you; keeps every undecidable one |
 | Autofill extension — connected by a revocable token | `/api/auth/extension`; the Kit tells you about it at the moment you apply |
-| Tests — 101, against real captured fixtures | `pnpm test` |
+| Résumé layouts — three, all one-column and ATS-safe | `?template=`; a test asserts every layout says the identical thing |
+| Tests — 107, against real captured fixtures | `pnpm test` |
 
 ## Running it
 

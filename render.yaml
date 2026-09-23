@@ -49,9 +49,21 @@ services:
       # An honest User-Agent needs a real address behind it (NFR-1, FR-37).
       - key: LANDFALL_CONTACT
         sync: false
-      # Résumé files and cached vendor responses. Points at the disk below.
-      - key: LANDFALL_STATE_DIR
-        value: /var/data
+      # Résumé files and cached vendor responses.
+      #
+      # Deliberately NOT set to /var/data unless the disk below is mounted.
+      # /var/data is the mount point; with no disk it does not exist, the
+      # service runs unprivileged, and `mkdir /var/data` fails EACCES — which
+      # would not break the boot (every write creates its directory lazily)
+      # but would fail the first résumé upload, in production, with a stack
+      # trace instead of an answer.
+      #
+      # Unset, it falls back to ./storage inside the deploy, which is writable.
+      # That storage is wiped on every deploy either way without a disk, so the
+      # only thing /var/data would buy here is a worse failure.
+      # Uncomment BOTH this and the disk block together, never one alone.
+      # - key: LANDFALL_STATE_DIR
+      #   value: /var/data
       # Optional — only rewording suggestions need it (FR-48). Set in the
       # dashboard, never in this file.
       - key: ANTHROPIC_API_KEY

@@ -6,6 +6,7 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import { prisma } from './lib/db.js';
+import { checkStateDirWritable } from './lib/state-check.js';
 import { registerAuthRoutes, registerGoogleRoutes } from './routes/auth.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerPrepareRoutes, registerTemplateRoutes } from './routes/prepare.js';
@@ -122,6 +123,10 @@ if (existsSync(join(webDist, 'index.html'))) {
 } else if (process.env.NODE_ENV === 'production') {
   app.log.error({ webDist }, 'no web/dist — run `pnpm --filter ./web build` before starting');
 }
+
+// Before listening, not after: a service that cannot store a résumé is broken
+// whether or not anyone has tried yet, and the log is where that belongs.
+await checkStateDirWritable(app.log);
 
 const port = Number(process.env.PORT ?? 5175);
 // Loopback on a laptop; every container needs 0.0.0.0 or nothing outside it

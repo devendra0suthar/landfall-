@@ -44,6 +44,20 @@ export async function registerResumeRoutes(app: FastifyInstance): Promise<void> 
       stored = await storeResume(body, name);
     } catch (err) {
       if (err instanceof ResumeRejected) return reply.code(400).send({ error: err.message });
+      // A storage failure is ours, not theirs, and it must not arrive as a bare
+      // 500. This happened in production: LANDFALL_STATE_DIR pointed at an
+      // unmounted disk, and the only thing the candidate saw was a failure with
+      // no cause and nothing to do about it, at the moment they handed over
+      // their CV. The operator gets the path and the reason in the log; the
+      // candidate gets a sentence that says whose fault it is.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'EACCES' || code === 'EROFS' || code === 'ENOSPC' || code === 'ENOENT') {
+        req.log.error({ err, code }, 'résumé storage is not writable');
+        return reply.code(507).send({
+          error: 'we could not store that file — this is a problem on our side, '
+            + 'not with your résumé. Nothing was saved; please try again shortly.',
+        });
+      }
       throw err;
     }
 

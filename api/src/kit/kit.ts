@@ -62,6 +62,14 @@ export interface KitQuestion {
    * the thing that catches people out.
    */
   read: boolean;
+  /**
+   * Set when this is an open question the candidate can answer here, once,
+   * for every form that asks it: an unresolved recurring (bank) question.
+   * Never set on consent, attestation, demographic or health questions — they
+   * are not 'unresolved', they are theirs (rule 2) — and the bank endpoint
+   * refuses them regardless.
+   */
+  answerOnce: { labelKey: string; choices: string[] | null; employer: string | null } | null;
 }
 
 export interface KitForm {
@@ -165,6 +173,12 @@ export function formState(job: {
   return job.formReadable ? 'readable' : 'unpublished';
 }
 
+/** Whether a question's label names the employer, by its first distinctive word. */
+export function namesEmployer(label: string, company: string): boolean {
+  const word = company.toLowerCase().split(/[^a-z0-9]+/).find((w) => w.length >= 3);
+  return word !== undefined && new RegExp(`\\b${word}\\b`, 'i').test(label);
+}
+
 export type Bucket = 'answers' | 'yours' | 'open';
 
 /**
@@ -257,6 +271,7 @@ function expectedQuestions(bank: AnswerBank, hasResume: boolean): KitQuestion[] 
       value,
       reason: null,
       read: false,
+      answerOnce: null,
     });
   }
 
@@ -269,6 +284,7 @@ function expectedQuestions(bank: AnswerBank, hasResume: boolean): KitQuestion[] 
       value: null,
       reason: null,
       read: false,
+      answerOnce: null,
     });
   }
 
@@ -342,6 +358,20 @@ export function buildKit(input: KitInput): ApplicationKit {
           ? 'no résumé on file — upload one and this is answered for every application'
           : action.reason ?? null,
         read: true,
+        // Only unresolved recurring questions. Profile-shaped ones ("current
+        // company") belong on the profile — storing them in the bank too
+        // would be a second home for one fact.
+        // A question naming this employer ("Have you worked for Zscaler?")
+        // stays answerable: its label key keeps the name, so the saved answer
+        // only ever reaches this employer's forms. `employer` says so, so the
+        // button can read "every Zscaler form" rather than "every form".
+        answerOnce: action.source === 'unresolved' && action.answerability === 'bank'
+          ? {
+            labelKey: action.labelKey,
+            choices: action.choices ?? null,
+            employer: namesEmployer(action.questionLabel, job.company) ? job.company : null,
+          }
+          : null,
       };
 
       // 'user' is the 17.7% that is theirs by right (FR-6) and never appears

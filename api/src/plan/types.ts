@@ -160,6 +160,8 @@ export interface FillAction {
   reason?: string;
   /** Answerability the classifier assigned, kept for cross-checking. */
   answerability: Answerability;
+  /** Option labels, on unresolved select actions only — for answering in place. */
+  choices?: string[];
 }
 
 export interface FillPlan {

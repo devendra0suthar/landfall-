@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { compilePlan } from '../src/plan/plan.js';
 import { tailor } from '../src/resume/tailor.js';
 import { buildStarter } from '../src/compose/letter.js';
-import { buildKit, formState } from '../src/kit/kit.js';
+import { buildKit, formState, namesEmployer } from '../src/kit/kit.js';
 import { runRow } from '../src/run/run.js';
 import type { AnswerBank, CandidateProfile } from '../src/plan/types.js';
 import type { FormQuestion, JobPosting } from '../src/ingest/types.js';
@@ -427,4 +427,30 @@ test('a run names an unread form as unread, not as one the employer does not pub
   assert.match(unpublished.reason, /publishes no/);
   // An unpublished form must not become an item reporting "0 fields" either.
   assert.notEqual(unread.reason, unpublished.reason);
+});
+
+test('only unresolved recurring questions can be answered in the Kit — never a question that is theirs', () => {
+  // Answering in place writes to the bank, which then fills every form. That
+  // must never reach a consent, attestation or demographic question.
+  const kit = buildKit({
+    job: jobRow, plan: compilePlan(posting, profile, { answers: [] }),
+    formFields: questions.length, tailored, starter, bank: { answers: [] },
+    attachedFilename: 'Priya Raman CV.pdf',
+  });
+  assert.ok(kit.yours.length > 0, 'the fixture has questions only they may answer');
+  for (const q of kit.yours) assert.equal(q.answerOnce, null, q.label);
+  for (const q of kit.answers) assert.equal(q.answerOnce, null, q.label);
+  const answerable = kit.openItems.filter((q) => q.answerOnce !== null);
+  assert.ok(answerable.length > 0, 'an empty bank leaves something answerable');
+  for (const q of answerable) assert.equal(q.source, 'unresolved');
+});
+
+test('a question naming this employer is recognised, so it is saved for that employer only', () => {
+  // Its label key keeps the company name ("have you previously worked for
+  // zscaler"), so a saved answer reaches only that employer's forms. The Kit
+  // says so rather than promising "every form".
+  assert.equal(namesEmployer('Have you previously worked for Zscaler?', 'Zscaler'), true);
+  assert.equal(namesEmployer('Zscaler Confidential Information', 'Zscaler, Inc.'), true);
+  assert.equal(namesEmployer('How did you hear about this job?', 'Zscaler'), false);
+  assert.equal(namesEmployer('Are you authorised to work in the US?', 'Addepar'), false);
 });

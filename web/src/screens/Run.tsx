@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
-import type { RunResponse, RunItem } from '../api.js';
+import type { RunResponse, RunItem, GapReport, GapRow } from '../api.js';
 
 /**
  * The run — your next applications, already prepared.
@@ -27,6 +27,7 @@ export function Run(): React.ReactElement {
   const [size, setSize] = useState(10);
   const run = useAsync(() => api<RunResponse>(`/api/run?limit=${size}`), [size]);
   const d = run.data;
+  const gaps = useAsync(() => api<GapReport>('/api/gaps'), []);
 
   return (
     <>
@@ -34,6 +35,7 @@ export function Run(): React.ReactElement {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="lbl">Prepared for you</span>
           <h1>{d ? `Your next ${d.items.length} applications` : 'Your next applications'}</h1>
+          <p className="sub">Each form is prepared from your own facts. You check it and submit — Landfall never does.</p>
         </div>
         <div className="filters">
           <select value={size} onChange={(e) => setSize(Number(e.target.value))} aria-label="How many">
@@ -45,15 +47,6 @@ export function Run(): React.ReactElement {
       </div>
 
       <div className="body">
-        <div className="card flow">
-          {/* Short on purpose: on a phone the old two paragraphs plus three
-              stacked tiles pushed the first job ~900px down. */}
-          <p>
-            Roles you can take, each form prepared from your own facts. Open their
-            form, let the extension fill it, check it, and submit it yourself —
-            Landfall never submits for you.
-          </p>
-        </div>
 
         {/*
           * No `empty` here on purpose: State's generic "Nothing here yet" would
@@ -63,12 +56,16 @@ export function Run(): React.ReactElement {
         <State loading={run.loading} error={run.error} rows={5}>
           {d && (
             <>
-              {d.items.length > 0 && (
-                <div className="grid stats">
-                  <Stat n={d.totals.prepared} k="answers ready across this run" tone="ok" />
-                  <Stat n={d.totals.yours} k="questions only you may answer" />
-                  <Stat n={d.totals.open} k="still open — no answer on file yet" tone="warn" />
-                </div>
+              {/*
+                * Instead of three tiles ending in "75 still open": the few
+                * questions behind most of those 75. They repeat across
+                * employers, so one answer here fills them on every form.
+                */}
+              {gaps.data && (
+                <QuickAnswers
+                  rows={groupQuick(gaps.data.rows.bankable.filter((g) => g.answer === null && !FOLLOW_UP.test(g.labelKey))).slice(0, 4)}
+                  onSaved={() => { gaps.reload(); run.reload(); }}
+                />
               )}
 
               {d.available > d.items.length && (
@@ -121,17 +118,6 @@ export function Run(): React.ReactElement {
   );
 }
 
-function Stat({ n, k, tone }: { n: number; k: string; tone?: 'ok' | 'warn' }): React.ReactElement {
-  // The tone colours the number and a top accent, never the whole tile: the
-  // count is the thing to read, and it must not rely on colour (the label says
-  // what it is).
-  return (
-    <div className={tone ? `stat ${tone}` : 'stat'}>
-      <strong>{n.toLocaleString()}</strong>
-      <span className="sub">{k}</span>
-    </div>
-  );
-}
 
 /**
  * Record the candidate's own decision about one job (FR-22).
@@ -216,6 +202,99 @@ function RunLine({ item, n, onDone }: {
         </div>
         {error && <span className="sub" role="alert">{error}</span>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * One row per question as a person reads it. "How did you hear about this
+ * job?" and "…this opportunity?" are separate keys in the index and were two
+ * rows asking the same thing; grouped, one answer is saved to both.
+ */
+/**
+ * "If you selected … above" only means something next to its parent question
+ * on one form; asked on its own here it has no parent. The planner routes the
+ * same shape to the candidate (plan.ts), so this matches its rule.
+ */
+const FOLLOW_UP = /^if (yes|no|you|applicable|selected|other)|^if you'?(re|ve)/;
+
+interface QuickGroup { label: string; keys: string[]; jobCount: number }
+function groupQuick(rows: GapRow[]): QuickGroup[] {
+  const NOUN = /\b(this|the)\s+(job|opportunity|position|role|posting|vacancy)\b/g;
+  const byStem = new Map<string, QuickGroup>();
+  for (const g of rows) {
+    const stem = g.labelKey.replace(NOUN, '').replace(/\s+/g, ' ').trim();
+    const hit = byStem.get(stem);
+    if (hit) { hit.keys.push(g.labelKey); hit.jobCount += g.jobCount; }
+    else byStem.set(stem, { label: g.label, keys: [g.labelKey], jobCount: g.jobCount });
+  }
+  return [...byStem.values()].sort((a, b) => b.jobCount - a.jobCount);
+}
+
+/** Yes/no questions get two buttons; anything else a short text box. */
+const YES_NO = /^(are|do|have|will|can|would|is|did)\s/i;
+
+function QuickAnswers({ rows, onSaved }: { rows: QuickGroup[]; onSaved: () => void }): React.ReactElement | null {
+  if (rows.length === 0) return null;
+  return (
+    <div className="card flow quick">
+      <header>
+        <span className="lbl">Quick answers</span>
+        <a className="sub" href="#/gaps">all questions →</a>
+      </header>
+      <p className="sub">Employers keep asking these. Answer once and every form that asks is filled.</p>
+      <div className="rows">
+        {rows.map((g) => <QuickRow key={g.keys[0]} g={g} onSaved={onSaved} />)}
+      </div>
+    </div>
+  );
+}
+
+function QuickRow({ g, onSaved }: { g: QuickGroup; onSaved: () => void }): React.ReactElement {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save(value: string): Promise<void> {
+    if (!value.trim()) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      // The same endpoint as Gaps and the Kit, which refuses consent and
+      // demographic questions at the door — and those are never in the
+      // "bankable" list this is drawn from.
+      for (const key of g.keys) {
+        await api(`/api/bank/${encodeURIComponent(key)}`, {
+          method: 'PUT',
+          body: JSON.stringify({ value: value.trim() }),
+        });
+      }
+      onSaved();
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="row split">
+      <div style={{ minWidth: 0 }}>
+        <strong>{g.label}</strong>
+        <div className="sub">asked on {g.jobCount.toLocaleString()} forms</div>
+      </div>
+      {YES_NO.test(g.label) ? (
+        <div className="quick-actions">
+          <button className="btn" disabled={busy} onClick={() => void save('Yes')}>Yes</button>
+          <button className="btn" disabled={busy} onClick={() => void save('No')}>No</button>
+          {err && <span className="sub" role="alert">{err}</span>}
+        </div>
+      ) : (
+        <form className="quick-actions" onSubmit={(e) => { e.preventDefault(); void save(text); }}>
+          <input value={text} onChange={(e) => setText(e.target.value)} aria-label={g.label} placeholder="Your answer" />
+          <button className="btn p" disabled={busy || !text.trim()}>Save</button>
+          {err && <span className="sub" role="alert">{err}</span>}
+        </form>
+      )}
     </div>
   );
 }

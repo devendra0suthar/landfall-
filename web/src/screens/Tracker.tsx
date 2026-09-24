@@ -30,20 +30,14 @@ export function Tracker({ appId }: { appId?: string }): React.ReactElement {
     <>
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="lbl">Tracker</span>
-          <h1>What you sent, and to whom</h1>
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['APPLIED', 'READY', 'SAVED', 'SKIPPED'] as const).map((s) => (
-            <span key={s} className={s === 'APPLIED' ? 'chip deep' : 'chip'}>
-              {s.toLowerCase()} {counts[s] ?? 0}
-            </span>
-          ))}
+          <span className="lbl">Applied</span>
+          <h1>{counts.APPLIED ? `${counts.APPLIED} application${counts.APPLIED === 1 ? '' : 's'} sent` : 'Nothing sent yet'}</h1>
         </div>
       </div>
 
       <div className="body">
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,380px) minmax(0,1fr)', gap: 16 }}>
+        {/* A class, not an inline grid: an inline 380px column cannot stack on a phone. */}
+        <div className="tracker-grid">
           <div className="card">
             <header><span className="lbl">Newest first</span></header>
             <State loading={list.loading} error={list.error} empty={list.data?.rows.length === 0}>
@@ -108,7 +102,7 @@ function Detail({ app }: { app: AppDetail }): React.ReactElement {
       <div className="card">
         <header>
           <span className="lbl">
-            What you sent · frozen {new Date(sent.sentAt).toLocaleString()}
+            Sent {new Date(sent.sentAt).toLocaleDateString()}
           </span>
           <span className={sent.tailored ? 'chip ok' : 'chip'}>
             {sent.tailored ? 'tailored for this posting' : 'your file, as it stood'}
@@ -132,17 +126,10 @@ function Detail({ app }: { app: AppDetail }): React.ReactElement {
             </a>
           </div>
 
-          <div style={{ background: 'var(--paper)', border: '1px solid var(--rule-soft)', padding: '10px 12px' }}>
-            <span className="lbl">SHA-256 of the archived bytes</span>
-            <p className="mono" style={{ fontSize: 11.5, wordBreak: 'break-all', color: 'var(--ink-soft)' }}>
-              {sent.sha256}
-            </p>
-            <p className="sub">The download still hashes to this, or it is not the file that went.</p>
-          </div>
 
           {sent.bullets.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span className="lbl">The bullets they read — verbatim, in this order</span>
+              <span className="lbl">What they read</span>
               {sent.bullets.map((b, i) => (
                 <div className="bullet" key={b}>
                   <span className="s" style={{ color: 'var(--ink-muted)' }}>
@@ -164,14 +151,22 @@ function Detail({ app }: { app: AppDetail }): React.ReactElement {
         </div>
       </div>
 
+      {/* Plain words up front; the proof (the file's fingerprint) is one click
+          away for anyone who needs to show exactly what was sent. The status
+          still says "you marked it", never "confirmed" (rule 6). */}
       <div className="note">
-        <span className="lbl">Status</span>
         <p className="sub">
-          <span className="mono">submitted</span> — never{' '}
-          <span className="mono">confirmed</span>. We have no confirmation from{' '}
-          {app.job.company}, so we do not claim one. Kept until{' '}
-          {new Date(sent.expiresAt).toLocaleDateString()}, or until you delete it.
+          You marked this as applied. We have not heard from {app.job.company} — that
+          part is up to them. Kept until {new Date(sent.expiresAt).toLocaleDateString()}, or
+          until you delete it.
         </p>
+        <details className="fold">
+          <summary><span className="sub">File fingerprint</span></summary>
+          <p className="mono" style={{ fontSize: 11.5, wordBreak: 'break-all', color: 'var(--ink-soft)' }}>
+            SHA-256 {sent.sha256}
+          </p>
+          <p className="sub">The download will always match this — proof it is the file that went.</p>
+        </details>
       </div>
     </div>
   );

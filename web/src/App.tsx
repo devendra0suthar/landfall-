@@ -163,21 +163,19 @@ export function App(): React.ReactElement {
           <span className="wordmark">Landfall</span>
           <div className="ticks" aria-hidden="true" />
         </div>
+        {/*
+          * Five places, not nine. The products this is compared to have about
+          * four, each with one obvious thing to do, and nine side-by-side items
+          * made every visit a question of where to go. Nothing was removed:
+          * Kit is reached from a job (which is how anyone got there), and the
+          * rest are tabs inside the place they belong to — see <Tabs>.
+          */}
         <nav className="nav">
-          <a href="#/run" className={view.name === 'run' ? 'on' : ''}>Apply</a>
-          <a href="#/jobs" className={view.name === 'jobs' ? 'on' : ''}>Jobs</a>
-          <a
-            href={view.name === 'kit' ? `#/kit/${view.jobId}` : '#/jobs'}
-            className={view.name === 'kit' ? 'on' : ''}
-          >
-            Kit
-          </a>
-          <a href="#/resume" className={view.name === 'resume' ? 'on' : ''}>Résumé</a>
-          <a href="#/improve" className={view.name === 'improve' ? 'on' : ''}>Improve</a>
-          <a href="#/analyze" className={view.name === 'analyze' ? 'on' : ''}>Analysis</a>
-          <a href="#/tracker" className={view.name === 'tracker' ? 'on' : ''}>Tracker</a>
-          <a href="#/gaps" className={view.name === 'gaps' ? 'on' : ''}>Gaps</a>
-          <a href="#/profile" className={view.name === 'profile' ? 'on' : ''}>Profile</a>
+          <a href="#/run" className={GROUP[view.name] === 'run' ? 'on' : ''}>Apply</a>
+          <a href="#/jobs" className={GROUP[view.name] === 'jobs' ? 'on' : ''}>Jobs</a>
+          <a href="#/resume" className={GROUP[view.name] === 'resume' ? 'on' : ''}>Résumé</a>
+          <a href="#/gaps" className={GROUP[view.name] === 'gaps' ? 'on' : ''}>Answers</a>
+          <a href="#/tracker" className={GROUP[view.name] === 'tracker' ? 'on' : ''}>Applied</a>
         </nav>
         <div className="region">
           <Aim />
@@ -197,7 +195,8 @@ export function App(): React.ReactElement {
 
       <main className="main">
         <Boundary key={view.name}>
-        {view.name === 'welcome' && <Welcome email={me.candidate.email} />}
+        <Tabs view={view.name} />
+        {view.name === 'welcome' && <Welcome />}
         {view.name === 'run' && <Run />}
         {view.name === 'jobs' && <Jobs />}
         {view.name === 'kit' && <Kit jobId={view.jobId} />}
@@ -304,4 +303,42 @@ export function State({ loading, error, empty, rows = 4, children }: {
   }
   if (empty) return <p className="empty">Nothing here yet.</p>;
   return <>{children}</>;
+}
+
+/** Which of the five places a screen belongs to, for the nav highlight. */
+const GROUP: Partial<Record<Route['name'], string>> = {
+  run: 'run', kit: 'run',
+  jobs: 'jobs', analyze: 'jobs',
+  resume: 'resume', profile: 'resume', improve: 'resume', parse: 'resume',
+  gaps: 'gaps',
+  tracker: 'tracker',
+};
+
+const TABS: Record<string, Array<{ name: Route['name']; href: string; label: string }>> = {
+  jobs: [
+    { name: 'jobs', href: '#/jobs', label: 'Matched for you' },
+    { name: 'analyze', href: '#/analyze', label: 'Paste any job' },
+  ],
+  resume: [
+    { name: 'resume', href: '#/resume', label: 'File' },
+    { name: 'profile', href: '#/profile', label: 'Details' },
+    { name: 'improve', href: '#/improve', label: 'Improve wording' },
+  ],
+};
+
+/** The screens that used to be top-level, now one level down where they belong. */
+function Tabs({ view }: { view: Route['name'] }): React.ReactElement | null {
+  const group = GROUP[view];
+  const tabs = group ? TABS[group] : undefined;
+  if (!tabs) return null;
+  return (
+    <nav className="tabs" aria-label="Sections">
+      {tabs.map((t) => (
+        <a key={t.name} href={t.href} className={t.name === view || (view === 'parse' && t.name === 'resume') ? 'on' : ''}
+          aria-current={t.name === view ? 'page' : undefined}>
+          {t.label}
+        </a>
+      ))}
+    </nav>
+  );
 }

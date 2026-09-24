@@ -134,6 +134,8 @@ export interface KitQuestion {
   reason: string | null;
   /** False ⇒ this is a question that recurs elsewhere, not one of theirs. */
   read: boolean;
+  /** Answerable here, once, for every form that asks. Null otherwise. */
+  answerOnce: { labelKey: string; choices: string[] | null; employer: string | null } | null;
 }
 
 export interface ApplicationKit {

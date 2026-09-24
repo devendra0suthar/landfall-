@@ -19,7 +19,6 @@ import type { JobRow, ResumeList } from '../api.js';
 export function Jobs(): React.ReactElement {
   const [country, setCountry] = useState('');
   const [days, setDays] = useState('');
-  const [formOnly, setFormOnly] = useState(false);
   // On by default. The measured alternative is a candidate in India scrolling
   // past 1,155 roles that name a country they are not in — and autofilling one
   // of those is faster waste, not less waste.
@@ -32,7 +31,6 @@ export function Jobs(): React.ReactElement {
   const q = new URLSearchParams({ limit: String(PAGE), offset: String(offset) });
   if (country) q.set('country', country);
   if (days) q.set('postedWithinDays', days);
-  if (formOnly) q.set('formReadable', 'true');
   if (eligibleOnly) q.set('eligible', 'true');
 
   const { data, error, loading } = useAsync(
@@ -40,11 +38,11 @@ export function Jobs(): React.ReactElement {
       count: number; total: number; offset: number; hasMore: boolean;
       scored: boolean; eligibilityApplied: boolean; sortedBy: 'match'|'recent'; bestMatch: number | null; rows: JobRow[];
     }>(`/api/jobs?${q.toString()}`),
-    [country, days, formOnly, eligibleOnly, offset],
+    [country, days, eligibleOnly, offset],
   );
 
   // A filter change is a new result set, not more of the old one.
-  useEffect(() => { setOffset(0); setLoaded([]); }, [country, days, formOnly, eligibleOnly]);
+  useEffect(() => { setOffset(0); setLoaded([]); }, [country, days, eligibleOnly]);
 
   useEffect(() => {
     if (!data) return;
@@ -81,7 +79,7 @@ export function Jobs(): React.ReactElement {
     <>
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="lbl">Live index</span>
+          <span className="lbl">Best fit first</span>
           {/* The total matching the filter, not the size of the page. The old
               header read "60 open roles" whether the filter matched 60 or 2,400. */}
           <h1>{data ? `${data.total.toLocaleString()} open roles` : 'Jobs'}</h1>
@@ -104,14 +102,6 @@ export function Jobs(): React.ReactElement {
           <label className="sub" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input
               type="checkbox"
-              checked={formOnly}
-              onChange={(e) => setFormOnly(e.target.checked)}
-            />
-            Form readable only
-          </label>
-          <label className="sub" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="checkbox"
               checked={eligibleOnly}
               onChange={(e) => setEligibleOnly(e.target.checked)}
             />
@@ -123,16 +113,7 @@ export function Jobs(): React.ReactElement {
       <div className="body">
         {noResume && (
           <div className="note warn">
-            <span className="lbl">Start with your résumé</span>
-            <p>
-              There is no résumé on file. Every form in the sample asks for one, so until you
-              upload it the attachment field on every application stays empty — and the match
-              scores below are based only on skills typed in by hand.
-            </p>
-            <p className="sub">
-              Uploading also lets Landfall read your roles, dates and bullets into your profile,
-              which is what every tailored résumé is then selected from.
-            </p>
+            <p>Upload your résumé so we can match these to you and fill the forms.</p>
             <a className="btn p" href="#/resume">Upload my résumé →</a>
           </div>
         )}
@@ -169,15 +150,6 @@ export function Jobs(): React.ReactElement {
           </div>
         )}
 
-        <div className="note">
-          <span className="lbl">Two scores, never averaged</span>
-          <p className="sub">
-            <strong>Match</strong> is what we infer about the role from the posting.{' '}
-            <strong>Readiness</strong> is how much of its form we can fill from your own facts.
-            A role can be a perfect fit and still a long evening of typing, which is exactly
-            why these stay apart.
-          </p>
-        </div>
 
         <div className="card">
           <header>
@@ -282,7 +254,9 @@ function JobLine({ job }: { job: JobRow }): React.ReactElement {
             >
               <span style={{ width: `${Math.max(2, Math.min(100, job.match.score))}%` }} />
             </span>
-            <span className="lbl">{job.match.confidence} confidence</span>
+            {/* Only said when it should change how much you trust the number;
+                "LOW CONFIDENCE" in capitals under a 76 read as an alarm. */}
+            {job.match.confidence === 'low' && <span className="sub">rough estimate</span>}
           </>
         ) : (
           <span className="lbl">no profile to match</span>

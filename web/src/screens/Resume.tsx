@@ -92,7 +92,7 @@ export function Resume(): React.ReactElement {
     <>
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="lbl">Your documents</span>
+          <span className="lbl">Your file</span>
           <h1>Résumé</h1>
         </div>
         {active && (
@@ -142,10 +142,6 @@ export function Resume(): React.ReactElement {
             <button className="btn p" disabled={busy} onClick={() => fileRef.current?.click()}>
               {busy ? 'Working…' : 'Choose a file'}
             </button>
-            <p className="sub">
-              Stored in your own region with the rest of your data, and never served from a public
-              link. Nothing in it is shared with an employer until you attach it yourself.
-            </p>
           </div>
 
           {err && (
@@ -183,11 +179,6 @@ export function Resume(): React.ReactElement {
                   {rows.length} {rows.length === 1 ? 'file' : 'files'} · exactly one is attached
                 </span>
               </header>
-              <p className="sub">
-                Keep more than one if you aim the same facts at different job families, and switch
-                between them here. Superseded files stay — an application sent last week has to be
-                able to name the document that went with it.
-              </p>
               <div className="rows">
                 {rows.map((r) => (
                   <div className="row split" key={r.id}>
@@ -200,7 +191,7 @@ export function Resume(): React.ReactElement {
                       </span>
                       <span className="sub mono">
                         {r.bytes.toLocaleString()} bytes · uploaded{' '}
-                        {new Date(r.uploadedAt).toLocaleDateString()} · sha256 {r.sha256.slice(0, 12)}…
+                        {new Date(r.uploadedAt).toLocaleDateString()}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
@@ -225,17 +216,8 @@ export function Resume(): React.ReactElement {
 
           {active && (
             <div className="card flow">
-              <header><span className="lbl">Next: make your profile match it</span></header>
-              <p className="sub">
-                A file on its own answers one field. Reading it into your profile is what fills the
-                other sixty — your roles, dates and bullets become the facts every tailored résumé
-                is selected from, and the skills you claim become what match scores are computed
-                against.
-              </p>
-              <p className="sub">
-                A parse is a proposal, never a fact: every field arrives with a confidence and a
-                reason, and nothing is saved until you confirm it.
-              </p>
+              <header><span className="lbl">Next</span></header>
+              <p className="sub">Read it into your profile — you check what we found before anything is saved.</p>
               <a className="btn p" href="#/parse">Read {active.filename} into my profile →</a>
             </div>
           )}

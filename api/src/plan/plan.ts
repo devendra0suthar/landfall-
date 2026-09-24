@@ -388,6 +388,10 @@ function planQuestion(
     }
     return [{
       ...a, source: 'unresolved',
+      // The employer's own choices, so the candidate can answer in the Kit
+      // with a value that matches one — a free-typed "yes" against options
+      // labelled "Yes, I am authorised" would be saved and then match nothing.
+      ...(f.options && f.options.length > 0 ? { choices: f.options.map((o) => o.label) } : {}),
       reason: q.answerability === 'bank'
         ? 'no saved answer yet — answer it once and it fills every form that asks'
         : 'nothing in your profile answers this yet',

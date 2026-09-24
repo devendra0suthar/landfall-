@@ -27,15 +27,18 @@ export function ParseReview(): React.ReactElement {
     <>
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="lbl">Profile · résumé</span>
-          <h1>What we read from your file</h1>
+          <span className="lbl">Step 1 of 2</span>
+          <h1>Check what we read</h1>
         </div>
         {data && (
           <div style={{ display: 'flex', gap: 7 }}>
-            <span className={data.parsed.needsReview > 0 ? 'chip warn' : 'chip ok'}>
-              {data.parsed.needsReview} need your eye
-            </span>
-            <span className="chip">{data.parsed.fieldCount} fields read</span>
+            {/* Counted the way rows are highlighted — only "check this". */}
+            {(() => {
+              const p = data.parsed;
+              const n = [p.firstName, p.lastName, p.email, p.phone, p.location, p.linkedin, p.currentTitle]
+                .filter((f) => f.confidence === 'low' && f.value.trim() !== '').length;
+              return <span className={n > 0 ? 'chip warn' : 'chip ok'}>{n > 0 ? `${n} to check` : 'all looks right'}</span>;
+            })()}
           </div>
         )}
       </div>
@@ -98,13 +101,15 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
 
   if (saved) {
     return (
+      // Straight on to the point of it all. "Back to your profile" was a dead
+      // end in the middle of the one journey a new person is on.
       <div className="note ok">
-        <span className="lbl">Confirmed and saved</span>
-        <p className="sub">
-          These are your facts now. Match scores and every tailored résumé are computed from
-          them on the next request.
+        <span className="lbl">Saved</span>
+        <p>Your profile is ready. We have matched jobs and prepared the forms.</p>
+        <p style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a className="btn p" href="#/run">See your prepared applications →</a>
+          <a className="btn" href="#/profile">Edit details</a>
         </p>
-        <a className="btn" href="#/profile">Back to your profile</a>
       </div>
     );
   }
@@ -112,11 +117,9 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
   return (
     <>
       <div className="note">
-        <span className="lbl">Nothing here is saved yet</span>
-        <p className="sub">{data.note}</p>
-        <p className="sub">
-          Read from <span className="mono">{data.source.filename}</span> ·{' '}
-          {p.textLength.toLocaleString()} characters of text.
+        <p>
+          Check what we read from <span className="mono">{data.source.filename}</span>, fix
+          anything wrong, then confirm. Nothing is saved until you do.
         </p>
       </div>
 
@@ -173,8 +176,8 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
             onChange={(e) => setSkills(e.target.value)}
           />
           <p className="sub">
-            Red ones are outside the matcher&rsquo;s vocabulary — keep them if they are true,
-            but they will never count as evidence against a posting.
+            Skills in red are ones we don&rsquo;t recognise — keep them if true, but they
+            won&rsquo;t count when matching jobs.
           </p>
         </div>
       </div>
@@ -217,14 +220,12 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
 
       {err && <div className="note bad"><span className="lbl">Not saved</span><p className="sub">{err}</p></div>}
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* Sticky: the page is long, and the one action on it was below the fold. */}
+      <div className="save-bar">
         <button className="btn p" onClick={() => void save()} disabled={busy}>
-          {busy ? 'Saving…' : 'Confirm and save to my profile'}
+          {busy ? 'Saving…' : 'Looks right — save it'}
         </button>
-        <a className="btn" href="#/profile">Cancel</a>
-        <span className="sub">
-          You are confirming these are your facts. Nothing was stored until now.
-        </span>
+        <a className="btn" href="#/resume">Cancel</a>
       </div>
     </>
   );
@@ -233,7 +234,12 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
 function Row({ f, label, value, onChange }: {
   f: ParsedField<string>; label: string; value: string; onChange: (v: string) => void;
 }): React.ReactElement {
-  const flagged = f.confidence !== 'high';
+  // Only what we are genuinely unsure of is highlighted. Flagging every
+  // "medium" lit up six of seven contact fields — including a name read off
+  // line one — and a page where everything is a warning reads as broken.
+  // An empty field is "not found", not an error: LinkedIn is optional.
+  const empty = value.trim() === '';
+  const flagged = f.confidence === 'low' && !empty;
   return (
     // Layout lives in .review-row, not inline: an inline grid cannot be
     // overridden by the phone breakpoint, and on a 390px screen it squeezed
@@ -262,8 +268,8 @@ function Row({ f, label, value, onChange }: {
           </div>
         )}
       </div>
-      <span className={`${TONE[f.confidence] ?? 'chip'} conf`}>
-        {f.confidence}
+      <span className={empty ? 'chip conf' : `${TONE[f.confidence] ?? 'chip'} conf`}>
+        {empty ? 'not found' : f.confidence === 'low' ? 'check this' : f.confidence === 'medium' ? 'probably right' : 'sure'}
       </span>
     </div>
   );

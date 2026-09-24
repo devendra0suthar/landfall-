@@ -108,6 +108,12 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
   }
 
   const k = kit.data;
+  // Null unless we actually read their form: a percentage over questions we
+  // expect rather than know would be a readiness claim about a form unseen.
+  const total = k ? k.counts.prepared + k.counts.yours + k.counts.open : 0;
+  const ready = k && k.form.state === 'readable' && total > 0
+    ? { pct: Math.round((k.counts.prepared / total) * 100), prepared: k.counts.prepared, total }
+    : null;
   const score = scored.data?.score ?? null;
 
   return (
@@ -115,7 +121,7 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="lbl">
-            <a href="#/jobs">← Jobs</a>
+            <a href="#/run">← Your applications</a>
             {k ? ` · ${k.job.company}${k.job.location ? ` · ${k.job.location}` : ''}` : ''}
           </span>
           <h1>{k?.job.title ?? 'Building your kit…'}</h1>
@@ -129,17 +135,18 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
               <Score
                 k="Match"
                 v={String(score.match.score)}
-                note={`${score.match.confidence} confidence`}
+                note={score.match.confidence === 'low' ? 'rough estimate' : 'out of 100'}
                 tone={score.match.score >= 60 ? 'good' : 'warn'}
               />
+              {/* The one percentage on this screen. It is computed from the
+                  same three counts as the tiles below, so the header cannot
+                  say 35% while the tiles add up to 40%. "Coverage" (how much of
+                  the form WE could read) used to sit beside it as a second
+                  percentage and people read the two as one thing. */}
               <Score
-                k="Readiness"
-                v={score.readiness.measured && score.readiness.pct !== null
-                  ? `${Math.round(score.readiness.pct * 100)}%`
-                  : '—'}
-                note={score.readiness.measured
-                  ? `${score.readiness.filled} of ${score.readiness.total} fields`
-                  : 'form not readable'}
+                k="Answers ready"
+                v={ready !== null ? `${ready.pct}%` : '—'}
+                note={ready !== null ? `${ready.prepared} of ${ready.total} questions` : 'form not read'}
                 tone="deep"
               />
             </>
@@ -158,30 +165,22 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
             <>
               {/* Announced first, always. See the header comment. */}
               <div className={FORM_TONE[k.form.state]}>
+                {/* The full statement only when it is a warning. For a form we
+                    read, the label and the count say it all. */}
                 <span className="lbl">{FORM_LABEL[k.form.state]}</span>
-                <p>{k.form.statement}</p>
+                {k.form.state !== 'readable' && <p>{k.form.statement}</p>}
                 <p className="sub">
                   {k.form.fields === null
                     // "Unknown" is a real answer and gets rendered as one. A 0
                     // here would read as "they ask nothing".
                     ? 'Questions on their form: unknown'
-                    : `${k.form.stated} of ${k.form.fields} questions on their form are covered below`}
-                  {k.form.coverage !== null ? ` · ${k.form.coverage}% coverage` : ''}
+                    : `${k.form.stated} of ${k.form.fields} questions on their form are listed below`}
                   {k.form.skippedOptionalBlank > 0
                     ? ` · ${k.form.skippedOptionalBlank} optional field${k.form.skippedOptionalBlank === 1 ? '' : 's'} you have left blank`
                     : ''}
                 </p>
               </div>
 
-              <div className="grid">
-                <Stat n={k.counts.prepared} k="ready to paste — from your own verified facts" tone="ok" />
-                <Stat n={k.counts.yours} k="only you may answer — consent, attestation, demographics" />
-                <Stat
-                  n={k.counts.open}
-                  k="still open — prose to write, or nothing stored yet"
-                  tone={k.counts.open > 0 ? 'warn' : undefined}
-                />
-              </div>
 
               {/*
                 * Straight after the counts, not after the résumé. It was the
@@ -189,32 +188,6 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
                 * typing sat below everything you only need to skim.
                 */}
               <ApplyWithExtension formState={k.form.state} url={k.job.url} />
-
-              {score && (
-                <div className="card flow">
-                  <header>
-                    <span className="lbl">Why this match score</span>
-                    <span className="sub">{score.match.basis.join(' · ')}</span>
-                  </header>
-                  <div className="rows">
-                    {score.match.signals.map((sig) => (
-                      <div className="row split" key={sig.name}>
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
-                          <strong>{sig.name}</strong>
-                          <span className="sub">{sig.detail}</span>
-                        </span>
-                        <span className={sig.hit ? 'chip ok' : 'chip'}>{sig.hit ? 'yes' : 'no'}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {score.match.missingSkills.length > 0 && (
-                    <p className="sub">
-                      Asked for, not claimed: {score.match.missingSkills.slice(0, 8).join(' · ')}. An
-                      inference about the posting, not a judgement about whether you would be hired.
-                    </p>
-                  )}
-                </div>
-              )}
 
               {k.answers.length > 0 && (
                 <Section
@@ -242,7 +215,9 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
                   // do it. The answering happens on Gaps; say where.
                   action={<a className="btn" href="#/gaps">Answer them once →</a>}
                 >
-                  {k.openItems.map((q, i) => <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} twin={twins(k, q)} />)}
+                  {k.openItems.map((q, i) => (
+                    <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} twin={twins(k, q)} onAnswered={kit.reload} />
+                  ))}
                 </Section>
               )}
 
@@ -258,6 +233,30 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
                   </p>
                   <a className="btn p" href="#/resume">Upload my résumé →</a>
                 </div>
+              )}
+
+              {score && (
+                <details className="card flow fold">
+                  {/* Folded: useful to check, not needed to apply. */}
+                  <summary><span className="lbl">Why it matched · {score.match.score}</span></summary>
+                  <div className="rows">
+                    {score.match.signals.map((sig) => (
+                      <div className="row split" key={sig.name}>
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
+                          <strong>{sig.name}</strong>
+                          <span className="sub">{sig.detail}</span>
+                        </span>
+                        <span className={sig.hit ? 'chip ok' : 'chip'}>{sig.hit ? 'yes' : 'no'}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {score.match.missingSkills.length > 0 && (
+                    <p className="sub">
+                      Asked for, not claimed: {score.match.missingSkills.slice(0, 8).join(' · ')}. An
+                      inference about the posting, not a judgement about whether you would be hired.
+                    </p>
+                  )}
+                </details>
               )}
 
               <Resume kit={k} jobId={jobId} />
@@ -554,7 +553,9 @@ function twins(k: ApplicationKit, q: KitQuestion): string | null {
   return `${all.indexOf(q) + 1} of ${all.length} with this label`;
 }
 
-function Row({ q, twin }: { q: KitQuestion; twin: string | null }): React.ReactElement {
+function Row({ q, twin, onAnswered }: {
+  q: KitQuestion; twin: string | null; onAnswered?: () => void;
+}): React.ReactElement {
   const chip = SOURCE_CHIP[q.source];
   const [copied, setCopied] = useState(false);
 
@@ -589,6 +590,7 @@ function Row({ q, twin }: { q: KitQuestion; twin: string | null }): React.ReactE
         {q.value !== null && <span className="mono">{q.value}</span>}
         {q.reason !== null && <span className="sub">{q.reason}</span>}
         {twin && <span className="sub" title={q.fieldName ?? undefined}>{twin}</span>}
+        {q.answerOnce && onAnswered && <AnswerOnce spec={q.answerOnce} label={q.label} onSaved={onAnswered} />}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
         <span className={chip.cls}>{chip.label}</span>
@@ -637,15 +639,6 @@ function Score({ k, v, note, tone }: {
   );
 }
 
-function Stat({ n, k, tone }: { n: number; k: string; tone?: 'ok' | 'warn' | 'bad' }): React.ReactElement {
-  // Same tile as the run's, so the two screens show a count the same way.
-  return (
-    <div className={tone ? `card stat ${tone}` : 'card stat'}>
-      <strong>{n}</strong>
-      <span className="sub">{k}</span>
-    </div>
-  );
-}
 
 /**
  * Choosing a layout.
@@ -696,5 +689,61 @@ function TemplatePicker({ value, onChange }: {
         Only the typesetting changes.
       </p>
     </div>
+  );
+}
+
+/**
+ * Answer an open recurring question here, once, for every form that asks it.
+ *
+ * "Still open" used to say "answer these once" and then offer nowhere to do
+ * it — the answering lived on Gaps, three clicks and a context switch away.
+ * Saving goes to the same bank endpoint Gaps uses, which refuses consent and
+ * demographic questions at the door; the Kit only offers the box on questions
+ * the server marked answerable. After saving, the Kit reloads, so the row
+ * moves to "your answers" because the plan now resolves it — not because the
+ * screen assumed it would.
+ */
+function AnswerOnce({ spec, label, onSaved }: {
+  spec: { labelKey: string; choices: string[] | null; employer: string | null };
+  label: string;
+  onSaved: () => void;
+}): React.ReactElement {
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    if (!value.trim()) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await api(`/api/bank/${encodeURIComponent(spec.labelKey)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value: value.trim() }),
+      });
+      onSaved();
+    } catch (x) {
+      setErr((x as Error).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="answer-once" onSubmit={(e) => void save(e)}>
+      {spec.choices ? (
+        <select value={value} onChange={(e) => setValue(e.target.value)} aria-label={label}>
+          <option value="">Choose your answer…</option>
+          {spec.choices.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      ) : (
+        <input value={value} onChange={(e) => setValue(e.target.value)} aria-label={label}
+          placeholder="Your answer" />
+      )}
+      <button className="btn p" disabled={busy || !value.trim()}>
+        {spec.employer ? `Save for every ${spec.employer} form` : 'Save for every form'}
+      </button>
+      {err && <span className="sub" role="alert">{err}</span>}
+    </form>
   );
 }

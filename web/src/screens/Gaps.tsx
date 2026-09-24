@@ -18,47 +18,27 @@ export function Gaps(): React.ReactElement {
     <>
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="lbl">Answer once, reuse everywhere</span>
-          <h1>Gaps</h1>
+          <span className="lbl">Answer once, used on every form</span>
+          <h1>Your answers</h1>
         </div>
-        {data && (
-          <span className="sub">
-            measured over {data.formsRead} forms we have read · {data.totalQuestions} questions
-          </span>
-        )}
       </div>
 
       <div className="body">
         <State loading={loading} error={error}>
           {data && (
             <>
-              {data.reach.bankable > 0 && (
-                <div className="note">
-                  <span className="lbl">Why this is worth your time</span>
-                  <p className="sub">
-                    The unanswered questions below appear{' '}
-                    <strong>{data.reach.bankable.toLocaleString()}</strong> times across the
-                    forms we have read. They are the same few questions wearing many
-                    employers&rsquo; phrasings — which is what makes answering one worth
-                    doing once.
-                  </p>
-                </div>
-              )}
 
               {data.rows.profile.length > 0 && (
                 <Section
-                  title="Fill these on your profile"
-                  note={`Together they appear ${data.reach.profile} times. They belong on the profile
-                         rather than here — the same fact stored twice is a fact that can
-                         disagree with itself.`}
+                  title="Add these to your profile"
+                  note="Facts about you — add them once on your profile and every form is filled."
                   rows={data.rows.profile}
                 />
               )}
 
               <Section
-                title="Answer once, reused everywhere"
-                note="Stored against the normalised question, so every employer who asks it in
-                      their own words gets the same answer."
+                title="Common questions"
+                note="Employers ask these in their own words. One answer covers them all."
                 rows={data.rows.bankable}
                 editable
                 onSaved={reload}
@@ -153,9 +133,8 @@ function GapLine({ row, editable, tone, onSaved }: {
 
       {row.profileField && (
         <span className="sub">
-          {/* Was "as <mono>currentCompany</mono>": a code name with nowhere to go. */}
-          A fact about you, so it lives on your profile —{' '}
-          <a href="#/profile">add it there</a> and every form that asks is filled.
+          {/* One link, not a sentence: the section note already says why. */}
+          <a href="#/profile">Add to your profile →</a>
         </span>
       )}
 

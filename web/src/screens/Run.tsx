@@ -58,14 +58,21 @@ export function Run(): React.ReactElement {
           </p>
         </div>
 
-        <State loading={run.loading} error={run.error} empty={d?.items.length === 0} rows={5}>
+        {/*
+          * No `empty` here on purpose: State's generic "Nothing here yet" would
+          * hide couldNotPrepare, and a run where all ten failed must still say
+          * why. The empty case is handled below, with somewhere to go next.
+          */}
+        <State loading={run.loading} error={run.error} rows={5}>
           {d && (
             <>
-              <div className="grid">
-                <Stat n={d.totals.prepared} k="answers ready across this run" tone="ok" />
-                <Stat n={d.totals.yours} k="questions only you may answer" />
-                <Stat n={d.totals.open} k="still open — no answer on file yet" tone="warn" />
-              </div>
+              {d.items.length > 0 && (
+                <div className="grid">
+                  <Stat n={d.totals.prepared} k="answers ready across this run" tone="ok" />
+                  <Stat n={d.totals.yours} k="questions only you may answer" />
+                  <Stat n={d.totals.open} k="still open — no answer on file yet" tone="warn" />
+                </div>
+              )}
 
               {d.available > d.items.length && (
                 <p className="sub">
@@ -89,8 +96,25 @@ export function Run(): React.ReactElement {
                 </div>
               )}
 
+              {d.items.length === 0 && (
+                <div className="note">
+                  <span className="lbl">
+                    {d.available === 0 ? 'Nothing left to prepare' : 'Nothing prepared this time'}
+                  </span>
+                  <p>
+                    {d.available === 0
+                      ? 'You have been through every role you are eligible for whose form we can read. '
+                        + 'New postings arrive as boards are re-read — or widen the search yourself.'
+                      : 'None of the top matches could be prepared — the reasons are above.'}
+                  </p>
+                  <p><a className="btn" href="#/jobs">Browse all jobs</a></p>
+                </div>
+              )}
+
               <div className="rows">
-                {d.items.map((item, i) => <RunLine key={item.jobId} item={item} n={i + 1} />)}
+                {d.items.map((item, i) => (
+                  <RunLine key={item.jobId} item={item} n={i + 1} onDone={run.reload} />
+                ))}
               </div>
             </>
           )}
@@ -109,8 +133,46 @@ function Stat({ n, k, tone }: { n: number; k: string; tone?: string }): React.Re
   );
 }
 
+/**
+ * Record the candidate's own decision about one job (FR-22).
+ *
+ * This is what makes "finish these and the next ones move up" true: the run
+ * skips APPLIED and SKIPPED, and without a way to reach either from here the
+ * list handed back the same ten jobs forever. APPLIED is their claim that they
+ * pressed submit — nothing here contacts the employer.
+ */
+async function mark(jobId: string, status: 'APPLIED' | 'SKIPPED'): Promise<void> {
+  const created = await api<{ id: string }>('/api/applications', {
+    method: 'POST',
+    body: JSON.stringify({ jobId }),
+  });
+  await api(`/api/applications/${created.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
 /** One job in the run. Everything needed to act, nothing else. */
-function RunLine({ item, n }: { item: RunItem; n: number }): React.ReactElement {
+function RunLine({ item, n, onDone }: {
+  item: RunItem; n: number; onDone: () => void;
+}): React.ReactElement {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function act(status: 'APPLIED' | 'SKIPPED'): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      // Any archive note ("nothing could be saved") is shown on the Tracker,
+      // where the record lives; the status was recorded either way.
+      await mark(item.jobId, status);
+      onDone();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="row split" style={{ alignItems: 'flex-start' }}>
       <div style={{ minWidth: 0 }}>
@@ -133,9 +195,16 @@ function RunLine({ item, n }: { item: RunItem; n: number }): React.ReactElement 
           )}
         </div>
       </div>
-      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <a className="btn" href={`#/kit/${item.jobId}`}>Open kit</a>
         <a className="btn p" href={item.url} target="_blank" rel="noreferrer">Their form ↗</a>
+        <button className="btn" disabled={busy} onClick={() => void act('APPLIED')}>
+          I applied
+        </button>
+        <button className="btn" disabled={busy} onClick={() => void act('SKIPPED')}>
+          Skip
+        </button>
+        {error && <span className="sub" role="alert">{error}</span>}
       </span>
     </div>
   );

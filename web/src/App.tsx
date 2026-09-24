@@ -141,20 +141,20 @@ export function App(): React.ReactElement {
           <div className="ticks" aria-hidden="true" />
         </div>
         <nav className="nav">
-          <a href="#/run" className={route.name === 'run' ? 'on' : ''}>Apply</a>
-          <a href="#/jobs" className={route.name === 'jobs' ? 'on' : ''}>Jobs</a>
+          <a href="#/run" className={view.name === 'run' ? 'on' : ''}>Apply</a>
+          <a href="#/jobs" className={view.name === 'jobs' ? 'on' : ''}>Jobs</a>
           <a
-            href={route.name === 'kit' ? `#/kit/${route.jobId}` : '#/jobs'}
-            className={route.name === 'kit' ? 'on' : ''}
+            href={view.name === 'kit' ? `#/kit/${view.jobId}` : '#/jobs'}
+            className={view.name === 'kit' ? 'on' : ''}
           >
             Kit
           </a>
-          <a href="#/resume" className={route.name === 'resume' ? 'on' : ''}>Résumé</a>
-          <a href="#/improve" className={route.name === 'improve' ? 'on' : ''}>Improve</a>
-          <a href="#/analyze" className={route.name === 'analyze' ? 'on' : ''}>Analysis</a>
-          <a href="#/tracker" className={route.name === 'tracker' ? 'on' : ''}>Tracker</a>
-          <a href="#/gaps" className={route.name === 'gaps' ? 'on' : ''}>Gaps</a>
-          <a href="#/profile" className={route.name === 'profile' ? 'on' : ''}>Profile</a>
+          <a href="#/resume" className={view.name === 'resume' ? 'on' : ''}>Résumé</a>
+          <a href="#/improve" className={view.name === 'improve' ? 'on' : ''}>Improve</a>
+          <a href="#/analyze" className={view.name === 'analyze' ? 'on' : ''}>Analysis</a>
+          <a href="#/tracker" className={view.name === 'tracker' ? 'on' : ''}>Tracker</a>
+          <a href="#/gaps" className={view.name === 'gaps' ? 'on' : ''}>Gaps</a>
+          <a href="#/profile" className={view.name === 'profile' ? 'on' : ''}>Profile</a>
         </nav>
         <div className="region" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Aim />
@@ -275,7 +275,7 @@ export function State({ loading, error, empty, rows = 4, children }: {
       <div className="note bad">
         <span className="lbl">Could not load this</span>
         <p>{error}</p>
-        <p className="sub">The API runs on :5175 — check it is up.</p>
+        {import.meta.env.DEV && <p className="sub">The API runs on :5175 — check it is up.</p>}
       </div>
     );
   }

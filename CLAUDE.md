@@ -100,6 +100,7 @@ one is wrong even when it passes review on every other axis.
 ```
 pnpm dev            api (:5175) and web (:5174) together
 pnpm ingest -- <board-token>   pull a Greenhouse board into the index
+pnpm refresh        re-read every board: new roles in, closed ones marked closed
 pnpm db:push        apply schema.prisma
 pnpm typecheck      both packages
 pnpm migrate dev --name <x>    a schema change as a real migration

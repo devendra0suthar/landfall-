@@ -1,7 +1,7 @@
 import { Vendor } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { extractFacts, htmlToText, remoteScopeOf } from '../jobs/extract.js';
-import { fetchForm, listJobs, probeBoard } from './greenhouse.js';
+import { fetchForm, listJobsChecked, probeBoard } from './greenhouse.js';
 import type { JobPosting } from './types.js';
 
 /**
@@ -22,6 +22,8 @@ export interface IngestResult {
   jobsWritten: number;
   formsRead: number;
   questionsWritten: number;
+  /** Postings no longer on the board, marked closed by this pass. */
+  jobsClosed: number;
   skipped: string[];
 }
 
@@ -39,6 +41,7 @@ export async function ingestBoard(
     status: probe.status,
     jobsSeen: 0,
     jobsWritten: 0,
+    jobsClosed: 0,
     formsRead: 0,
     questionsWritten: 0,
     skipped: [],
@@ -59,7 +62,7 @@ export async function ingestBoard(
     return result;
   }
 
-  const postings = await listJobs(boardToken);
+  const { reached, postings } = await listJobsChecked(boardToken);
   result.jobsSeen = postings.length;
 
   const wanted = postings.slice(0, opts.forms ?? FORM_BATCH);
@@ -74,12 +77,43 @@ export async function ingestBoard(
     }
   }
 
+  // Postings the employer has taken down. Marked, never deleted: applications
+  // point at them, and a job that reappears is simply reopened by writeJob.
+  const close = postingsToClose(reached, postings.map((p) => p.vendorJobId));
+  if (close.act) {
+    const closed = await prisma.job.updateMany({
+      where: { boardId: board.id, closedAt: null, externalId: { notIn: close.stillListed } },
+      data: { closedAt: new Date() },
+    });
+    result.jobsClosed = closed.count;
+  } else {
+    result.skipped.push(close.why);
+  }
+
   await prisma.board.update({
     where: { id: board.id },
     data: { lastFetchedAt: new Date() },
   });
 
   return result;
+}
+
+/**
+ * Whether this pass may close anything, and against which list.
+ *
+ * Only when the board was actually reached AND returned postings. An empty
+ * listing from a board that had hundreds yesterday is far more likely a
+ * vendor hiccup than an employer closing every role at once — and wrongly
+ * closing them hides real openings, which is worse than leaving a closed one
+ * visible for another day. Timid on purpose, like the eligibility filter.
+ */
+export function postingsToClose(
+  reached: boolean,
+  listedIds: string[],
+): { act: true; stillListed: string[] } | { act: false; why: string } {
+  if (!reached) return { act: false, why: 'board unreachable — nothing closed' };
+  if (listedIds.length === 0) return { act: false, why: 'listing came back empty — nothing closed' };
+  return { act: true, stillListed: listedIds };
 }
 
 async function writeJob(
@@ -119,6 +153,9 @@ async function writeJob(
       formFetchedAt: Array.isArray(posting.questions) ? new Date() : null,
     },
     update: {
+      // Listed again, so open again — a posting that was briefly delisted
+      // (an edit, a re-post) must not stay hidden forever.
+      closedAt: null,
       title: posting.title,
       company: posting.companyName ?? posting.boardToken,
       location,

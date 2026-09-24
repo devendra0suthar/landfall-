@@ -163,6 +163,16 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
         <State loading={kit.loading} error={kit.error}>
           {k && (
             <>
+              {/* Before anything else: preparing an application for a job that
+                  no longer exists is the most wasted effort this screen can cause. */}
+              {k.job.closed && (
+                <div className="note warn">
+                  <span className="lbl">This job has closed</span>
+                  <p>{k.job.company} has taken this posting down, so it can no longer be applied to.</p>
+                  <p><a className="btn" href="#/run">See your other applications</a></p>
+                </div>
+              )}
+
               {/* Announced first, always. See the header comment. */}
               <div className={FORM_TONE[k.form.state]}>
                 {/* The full statement only when it is a warning. For a form we

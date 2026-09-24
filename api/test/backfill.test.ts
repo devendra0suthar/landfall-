@@ -40,3 +40,14 @@ test('a form with questions is readable', () => {
   assert.ok(withQuestions);
   assert.equal(withQuestions.formReadable, true);
 });
+
+test('a refresh closes postings only when the board was reached and listed something', async () => {
+  // listJobs used to return [] both for "no jobs" and for a failed request.
+  // Closing on that would hide every role an employer has because of one
+  // timeout; an empty listing from a board that had hundreds is treated the
+  // same way — far more likely a hiccup than a mass closure.
+  const { postingsToClose } = await import('../src/ingest/ingest.js');
+  assert.deepEqual(postingsToClose(false, ['1', '2']), { act: false, why: 'board unreachable — nothing closed' });
+  assert.equal(postingsToClose(true, []).act, false);
+  assert.deepEqual(postingsToClose(true, ['1', '2']), { act: true, stillListed: ['1', '2'] });
+});

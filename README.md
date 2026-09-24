@@ -72,6 +72,8 @@ createdb landfall               # or see api/.env.example
 pnpm migrate deploy             # migrations are the schema of record
 pnpm ingest -- addepar1 stripe  # any Greenhouse board token(s)
 pnpm forms -- --limit=2000      # read the forms ingest did not ask for
+pnpm refresh                    # re-read every board; closes jobs taken down
+                                # (the server does this itself when INDEX_REFRESH_HOURS is set)
 pnpm dev                        # api on :5175, web on http://localhost:5174
 ```
 

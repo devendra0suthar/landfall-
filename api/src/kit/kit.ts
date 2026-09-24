@@ -106,6 +106,8 @@ export interface ApplicationKit {
     company: string;
     location: string | null;
     url: string;
+    /** The employer has taken this posting down (a refresh no longer found it). */
+    closed: boolean;
   };
   form: KitForm;
   /** Prepared answers, in the employer's own field order. */
@@ -300,6 +302,7 @@ export interface KitInput {
     absoluteUrl: string;
     formFetchedAt: Date | null;
     formReadable: boolean;
+    closedAt?: Date | null;
   };
   /** Null when the form could not be read — the FR-43 path. */
   plan: FillPlan | null;
@@ -401,6 +404,7 @@ export function buildKit(input: KitInput): ApplicationKit {
       company: job.company,
       location: job.location,
       url: job.absoluteUrl,
+      closed: job.closedAt != null,
     },
     form: {
       state,

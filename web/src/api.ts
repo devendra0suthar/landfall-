@@ -139,7 +139,7 @@ export interface KitQuestion {
 }
 
 export interface ApplicationKit {
-  job: { id: string; title: string; company: string; location: string | null; url: string };
+  job: { id: string; title: string; company: string; location: string | null; url: string; closed: boolean };
   form: {
     state: KitFormState;
     /** Rendered verbatim — the honest phrasing lives on the server, not per screen. */

@@ -13,7 +13,8 @@
     "db:studio": "prisma studio",
     "seed": "tsx src/scripts/seed.ts",
     "test": "tsx --test test/*.test.ts",
-    "facts": "tsx src/scripts/facts.ts"
+    "facts": "tsx src/scripts/facts.ts",
+    "refresh": "tsx src/scripts/refresh.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",

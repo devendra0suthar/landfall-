@@ -34,6 +34,7 @@ export async function registerKitRoutes(app: FastifyInstance): Promise<void> {
         absoluteUrl: true,
         formFetchedAt: true,
         formReadable: true,
+        closedAt: true,
       },
     });
     if (!job) return reply.code(404).send({ error: 'no such job' });

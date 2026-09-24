@@ -57,36 +57,113 @@ export interface GapReport {
   reach: { profile: number; bankable: number };
 }
 
+/**
+ * Where a question type goes, decided from its key alone — so it is decided
+ * once, with the stats, not per request. It was ~40 regexes × 2,185 question
+ * types on every call, which was most of what was left after the query fix.
+ */
+type Route = 'yours' | 'skip' | 'perPosting' | 'profile' | 'bank';
+
+function routeFor(labelKey: string, answerability: string): Route {
+  // Human-only first: it outranks everything. A consent question that also
+  // looks bankable is still a consent question.
+  if (isHumanOnly(labelKey) || answerability === 'demographic') return 'yours';
+  // An attachment is not an unanswered question — it is answered by the
+  // résumé on file, or it is not, and the profile screen says which.
+  if (answerability === 'file') return 'skip';
+  // Prose is per posting by nature. It recurs, and it is still not bankable.
+  if (answerability === 'generated') return 'perPosting';
+  if (matchesProfilePattern(labelKey)) return 'profile';
+  return 'bank';
+}
+
+interface QuestionStats {
+  grouped: Array<{
+    labelKey: string; answerability: string; _count: { _all: number };
+    route: Route; profileField: string | null;
+  }>;
+  formsRead: number;
+  requiredByKey: Map<string, number>;
+  labelByKey: Map<string, string>;
+}
+
+/**
+ * The index-wide half of the report: the same for every candidate.
+ *
+ * One pass over the question table instead of three. The old version's third
+ * query was Prisma's `distinct`, which does not become SQL DISTINCT — it
+ * fetched all ~86,000 rows into Node and deduplicated them in JavaScript. That
+ * was 284 of the report's ~350 ms, on a report the Apply screen now loads on
+ * every visit.
+ *
+ * Grouped by the normalised key, not the label: "Have you worked at Figma"
+ * and "…at Addepar" are one question, and counting them separately is what
+ * makes a backlog look unbounded. `mode()` is the most common real phrasing,
+ * so the UI shows a question a person recognises rather than a slug.
+ *
+ * Cached for a few minutes because it only changes when forms are re-read,
+ * which is a batch job, never a request. A stale count for five minutes after
+ * an ingest is harmless; the per-candidate half below is never cached.
+ */
+const STATS_TTL_MS = 5 * 60_000;
+let statsCache: { at: number; value: Promise<QuestionStats> } | null = null;
+
+export function forgetQuestionStats(): void { statsCache = null; }
+
+function questionStats(): Promise<QuestionStats> {
+  if (statsCache && Date.now() - statsCache.at < STATS_TTL_MS) return statsCache.value;
+  const value = loadQuestionStats();
+  statsCache = { at: Date.now(), value };
+  // A failed load must not be cached as the answer for five minutes.
+  value.catch(() => { if (statsCache?.value === value) statsCache = null; });
+  return value;
+}
+
+async function loadQuestionStats(): Promise<QuestionStats> {
+  // The most common phrasing per key comes from a separate DISTINCT ON over
+  // per-phrasing counts: `mode() WITHIN GROUP` gives the same answer but sorts
+  // every label and measured 417 ms against 75 ms for this.
+  const [rows, phrasings, formsRead] = await Promise.all([
+    prisma.$queryRaw<Array<{ labelKey: string; answerability: string; n: bigint; req: bigint }>>`
+      SELECT "labelKey", "answerability",
+             count(*) AS n,
+             count(*) FILTER (WHERE "required") AS req
+        FROM "Question"
+       GROUP BY "labelKey", "answerability"
+       ORDER BY n DESC`,
+    prisma.$queryRaw<Array<{ labelKey: string; label: string }>>`
+      SELECT DISTINCT ON ("labelKey") "labelKey", "label"
+        FROM (SELECT "labelKey", "label", count(*) AS c FROM "Question" GROUP BY 1, 2) t
+       ORDER BY "labelKey", c DESC, "label"`,
+    prisma.job.count({ where: { formFetchedAt: { not: null }, formReadable: true } }),
+  ]);
+
+  const requiredByKey = new Map<string, number>();
+  for (const r of rows) {
+    // Required is per key across answerabilities, as the old groupBy counted it.
+    requiredByKey.set(r.labelKey, (requiredByKey.get(r.labelKey) ?? 0) + Number(r.req));
+  }
+  const labelByKey = new Map(phrasings.map((p) => [p.labelKey, p.label]));
+  return {
+    grouped: rows.map((r) => {
+      const route = routeFor(r.labelKey, r.answerability);
+      const field = route === 'profile' ? profileFieldFor(r.labelKey) : null;
+      return {
+        labelKey: r.labelKey, answerability: r.answerability, _count: { _all: Number(r.n) },
+        route, profileField: field ? String(field) : null,
+      };
+    }),
+    formsRead,
+    requiredByKey,
+    labelByKey,
+  };
+}
+
 export async function gapReport(
   profile: CandidateProfile,
   bank: AnswerBank,
 ): Promise<GapReport> {
-  // Group by the normalised key, not the label: "Have you worked at Figma"
-  // and "Have you worked at Addepar" are one question, and counting them
-  // separately is what makes a backlog look unbounded.
-  const grouped = await prisma.question.groupBy({
-    by: ['labelKey', 'answerability'],
-    _count: { _all: true },
-    orderBy: { _count: { labelKey: 'desc' } },
-  });
-
-  const [formsRead, required, samples] = await Promise.all([
-    prisma.job.count({ where: { formFetchedAt: { not: null }, formReadable: true } }),
-    prisma.question.groupBy({
-      by: ['labelKey'],
-      where: { required: true },
-      _count: { _all: true },
-    }),
-    // One real phrasing per key, so the UI shows a question a person recognises
-    // rather than a normalised slug.
-    prisma.question.findMany({
-      distinct: ['labelKey'],
-      select: { labelKey: true, label: true },
-    }),
-  ]);
-
-  const requiredByKey = new Map(required.map((r) => [r.labelKey, r._count._all]));
-  const labelByKey = new Map(samples.map((s) => [s.labelKey, s.label]));
+  const { grouped, formsRead, requiredByKey, labelByKey } = await questionStats();
 
   const rows: GapReport['rows'] = { profile: [], bankable: [], perPosting: [], yours: [] };
   const reach = { profile: 0, bankable: 0 };
@@ -107,29 +184,15 @@ export async function gapReport(
       answer: null,
     };
 
-    // Human-only first: it outranks everything. A consent question that also
-    // looks bankable is still a consent question.
-    if (isHumanOnly(labelKey) || g.answerability === 'demographic') {
-      rows.yours.push({ ...row, kind: 'yours' });
-      continue;
-    }
+    // See routeFor — the order of these checks lives there now.
+    if (g.route === 'yours') { rows.yours.push({ ...row, kind: 'yours' }); continue; }
+    if (g.route === 'skip') continue;
+    if (g.route === 'perPosting') { rows.perPosting.push({ ...row, kind: 'perPosting' }); continue; }
 
-    // An attachment is not an unanswered question — it is answered by the
-    // résumé on file, or it is not, and the profile screen says which.
-    if (g.answerability === 'file') continue;
-
-    // Prose is per posting by nature. It recurs, and it is still not bankable.
-    if (g.answerability === 'generated') {
-      rows.perPosting.push({ ...row, kind: 'perPosting' });
-      continue;
-    }
-
-    if (matchesProfilePattern(labelKey)) {
-      const hit = resolveProfile(labelKey, profile);
+    if (g.route === 'profile') {
       // Already answered from the profile — not a gap at all.
-      if (hit) continue;
-      const field = profileFieldFor(labelKey);
-      rows.profile.push({ ...row, kind: 'profile', profileField: field ? String(field) : null });
+      if (resolveProfile(labelKey, profile)) continue;
+      rows.profile.push({ ...row, kind: 'profile', profileField: g.profileField });
       reach.profile += jobCount;
       continue;
     }

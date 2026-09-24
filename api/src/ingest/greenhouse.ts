@@ -194,16 +194,39 @@ export async function probeBoard(boardToken: string): Promise<BoardProbe> {
 
 /** List every posting on a board (summaries only — no form schema). */
 export async function listJobs(boardToken: string): Promise<JobPosting[]> {
+  return (await listJobsChecked(boardToken)).postings;
+}
+
+/**
+ * The board's current listing, and whether we actually got it.
+ *
+ * `listJobs` returns [] both when the board has no jobs and when the request
+ * failed. A refresh must not confuse the two: closing every posting on a board
+ * because a request timed out would empty the index of that employer. Same
+ * shape as `fetchFormChecked`, for the same reason.
+ *
+ * Always fetched fresh. The disk cache in `fetchJson` never expires — right for
+ * the one-off analysis it was written for, and the reason every re-ingest had
+ * been re-reading the listing it saved the first time.
+ */
+export async function listJobsChecked(
+  boardToken: string,
+): Promise<{ reached: boolean; postings: JobPosting[] }> {
   // `content=true` returns every posting's description HTML in the same call.
   // Without it the index holds titles and nothing else to extract skills from,
   // which silently zeroes every match score — the failure looks like a narrow
   // vocabulary rather than a missing request.
   const res = await fetchJson<GhJobsResponse>(
     `${BASE}/${encodeURIComponent(boardToken)}/jobs?content=true`,
+    { fresh: true },
   );
-  if (!res.ok || !res.data?.jobs) return [];
+  if (!res.ok || !res.data?.jobs) return { reached: false, postings: [] };
 
-  return res.data.jobs.flatMap((j) => {
+  return { reached: true, postings: toPostings(boardToken, res.data.jobs) };
+}
+
+function toPostings(boardToken: string, jobs: NonNullable<GhJobsResponse['jobs']>): JobPosting[] {
+  return jobs.flatMap((j) => {
     if (j.id === undefined) return [];
     return [{
       vendor: 'greenhouse' as const,

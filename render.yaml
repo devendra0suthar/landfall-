@@ -57,6 +57,10 @@ services:
         fromDatabase:
           name: landfall-db
           property: connectionString
+      # Re-read every board once the index is a day old: new roles appear,
+      # closed ones leave. Checked on wake, since the free instance sleeps.
+      - key: INDEX_REFRESH_HOURS
+        value: "24"
       # An honest User-Agent needs a real address behind it (NFR-1, FR-37).
       - key: LANDFALL_CONTACT
         sync: false

@@ -21,6 +21,7 @@ import { registerParseRoutes } from './routes/parse.js';
 import { registerVariantRoutes } from './routes/variants.js';
 import { registerAccountRoutes } from './routes/account.js';
 import { registerSuggestRoutes } from './routes/suggest.js';
+import { scheduleIndexRefresh } from './ingest/refresh.js';
 import { registerRunRoutes } from './routes/run.js';
 
 /**
@@ -142,3 +143,7 @@ try {
   app.log.error(err);
   process.exit(1);
 }
+
+// Keeps the job index fresh when INDEX_REFRESH_HOURS is set (see refresh.ts).
+// Off by default, so a laptop dev server never starts crawling on its own.
+scheduleIndexRefresh((line) => app.log.info({ refresh: true }, line));

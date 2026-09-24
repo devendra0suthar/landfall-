@@ -69,6 +69,8 @@ export async function backfillForms(
     // Never asked. `formReadable: false` with a timestamp is a settled answer
     // and is not revisited here.
     formFetchedAt: null,
+    // No point reading the form of a posting the employer has taken down.
+    closedAt: null,
     ...(opts.boardToken ? { board: { slug: opts.boardToken } } : {}),
   };
 

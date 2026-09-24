@@ -271,6 +271,10 @@ model Job {
   /// questionnaire pointer and a questionnaire.
   formReadable Boolean   @default(false)
   formFetchedAt DateTime?
+  /// Set when a refresh reached the board and this posting was no longer on
+  /// it; cleared if it comes back. Closed jobs leave the index and the run but
+  /// are never deleted — the candidate's Applied history points at them.
+  closedAt      DateTime?
   fetchedAt     DateTime @default(now())
 
   questions    Question[]
@@ -279,6 +283,7 @@ model Job {
   @@unique([boardId, externalId])
   @@index([country])
   @@index([postedAt])
+  @@index([closedAt])
 }
 
 /// One field on an employer's application form, as the vendor describes it.
@@ -306,6 +311,9 @@ model Question {
   position  Int     @default(0)
 
   @@index([jobId])
+  /// Counting and looking up a question type across every form (the gap
+  /// report, saving an answer). Was a sequential scan of the whole table.
+  @@index([labelKey])
 }
 
 model Application {

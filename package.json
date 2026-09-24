@@ -18,7 +18,8 @@
     "build": "pnpm install --frozen-lockfile && pnpm --filter ./api exec prisma generate && pnpm --filter ./web build",
     "start": "pnpm --filter ./api exec prisma migrate deploy && pnpm --filter ./api start",
     "migrate": "pnpm --filter ./api exec prisma migrate",
-    "facts": "pnpm --filter ./api facts"
+    "facts": "pnpm --filter ./api facts",
+    "refresh": "pnpm --filter ./api refresh"
   },
   "packageManager": "pnpm@11.18.0",
   "engines": {

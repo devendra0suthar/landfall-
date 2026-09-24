@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { requireCandidate } from '../auth/session.js';
-import { loadBank, loadPosting, loadProfile } from '../profile/load.js';
+import { loadBank, loadProfile, postingFromRow } from '../profile/load.js';
 import { compilePlan } from '../plan/plan.js';
 import { eligibilityWhere } from '../jobs/eligibility.js';
 import { rankedJobIds } from '../jobs/ranking.js';
@@ -83,6 +83,8 @@ export async function registerRunRoutes(app: FastifyInstance): Promise<void> {
       ...eligibilityWhere(profile),
       ...(fillable ? { formReadable: true } : {}),
       board: { disabled: false },
+      // A worklist must never hand back a job that no longer exists.
+      closedAt: null,
     };
 
     const { ids } = await rankedJobIds(candidateId, profile, stamp, where);
@@ -107,14 +109,23 @@ export async function registerRunRoutes(app: FastifyInstance): Promise<void> {
     const items: RunItem[] = [];
     const couldNotPrepare: Array<{ jobId: string; reason: string }> = [];
 
+    // One query for the whole run. It was two per job, in sequence — twenty
+    // round trips for a run of ten, which on a remote database is most of the
+    // time the screen takes to appear.
+    const loaded = new Map((await prisma.job.findMany({
+      where: { id: { in: take } },
+      include: {
+        board: { select: { slug: true } },
+        questions: { orderBy: { position: 'asc' } },
+      },
+    })).map((j) => [j.id, j]));
+
+    // Iterate `take`, not the query result, so the run keeps ranking order.
     for (const id of take) {
-      const job = await prisma.job.findUnique({
-        where: { id },
-        include: { board: { select: { slug: true } } },
-      });
+      const job = loaded.get(id);
       if (!job) { couldNotPrepare.push({ jobId: id, reason: 'no longer indexed' }); continue; }
 
-      const posting = await loadPosting(id);
+      const posting = postingFromRow(job);
       const plan = posting ? compilePlan(posting, profile, bank) : null;
 
       // The same buckets the Kit uses, from the same function — a run that

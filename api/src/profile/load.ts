@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import type { AnswerBank, CandidateProfile } from '../plan/types.js';
 import type { JobPosting, FormQuestion, FieldKind } from '../ingest/types.js';
@@ -104,7 +105,19 @@ export async function loadPosting(jobId: string): Promise<JobPosting | null> {
       questions: { orderBy: { position: 'asc' } },
     },
   });
-  if (!job || !job.formFetchedAt) return null;
+  if (!job) return null;
+  return postingFromRow(job);
+}
+
+/**
+ * The same conversion for a row already loaded with its board and questions,
+ * so a caller preparing many postings (the run) can fetch them in one query
+ * rather than one per posting.
+ */
+export function postingFromRow(job: Prisma.JobGetPayload<{
+  include: { board: { select: { slug: true } }; questions: true };
+}>): JobPosting | null {
+  if (!job.formFetchedAt) return null;
 
   const questions: FormQuestion[] = job.questions.map((q) => ({
     label: q.label,

@@ -85,6 +85,8 @@ export async function registerJobRoutes(app: FastifyInstance): Promise<void> {
       ...(since ? { postedAt: { gte: since } } : {}),
       ...eligibility,
       board: { disabled: false },
+      // Taken down by the employer (see ingest's postingsToClose).
+      closedAt: null,
     };
 
     // Counted separately from the page, because `count` used to be

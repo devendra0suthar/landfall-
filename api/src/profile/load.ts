@@ -38,7 +38,16 @@ export async function loadProfile(candidateId: string): Promise<CandidateProfile
     orderBy: { uploadedAt: 'desc' },
   });
 
+  // "Current company" is asked on ~650 indexed forms and nothing ever set it,
+  // so it was always open even for someone whose confirmed history says where
+  // they work. It is read from the one role they confirmed as ongoing — and
+  // only when there is exactly one: two open roles, or none, is not a single
+  // fact, and guessing the "main" employer would be answering for them.
+  const ongoing = row.roles.filter((r) => !r.end);
+  const currentCompany = ongoing.length === 1 ? ongoing[0]!.company : null;
+
   return {
+    ...(currentCompany ? { currentCompany } : {}),
     firstName: row.firstName,
     lastName: row.lastName,
     email: row.email,

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { eligibilityWhere, excludedScopes, countryOf } from '../src/jobs/eligibility.js';
+import { eligibilityWhere, excludedScopes, countryOf, bareOtherCountryLocations } from '../src/jobs/eligibility.js';
 import type { CandidateProfile } from '../src/plan/types.js';
 
 /**
@@ -77,4 +77,15 @@ test('a candidate elsewhere excludes a different set', () => {
   const excluded = excludedScopes(inUs);
   assert.ok(!excluded.includes('US'), 'never exclude their own scope');
   assert.ok(excluded.includes('INDIA'));
+});
+
+test('a remote role whose whole location is another country is hidden; their own never is', () => {
+  // Found signed in as an India-based candidate: the top two roles of their
+  // run were remote, unscoped, and located "United States".
+  const bare = bareOtherCountryLocations(excludedScopes(inIndia()));
+  assert.ok(bare.includes('united states'));
+  assert.ok(bare.includes('remote - united states'));
+  assert.ok(!bare.some((l) => l.includes('india')), 'their own country is never hidden');
+  // Two-letter codes are too ambiguous to act on as a whole location.
+  assert.ok(!bare.includes('us') && !bare.includes('uk'));
 });

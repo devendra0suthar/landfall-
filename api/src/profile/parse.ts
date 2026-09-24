@@ -46,6 +46,8 @@ export interface ParsedRole {
   company: ParsedField<string>;
   start: ParsedField<string>;
   end: ParsedField<string | null>;
+  /** Where the role was, when the heading line ends in one ("… — Pune"). */
+  location?: ParsedField<string>;
   bullets: Array<ParsedField<string>>;
 }
 
@@ -143,6 +145,10 @@ const EXCLUDED = [
   { label: "father's or spouse's name", re: /\b(father'?s name|spouse'?s name)\b/i },
 ];
 
+/** "Jodhpur, Rajasthan, India" — words and commas, no digits, no address. */
+const isPlace = (seg: string): boolean =>
+  /^[\p{L} .'-]+,[\p{L} ,.'-]+$/u.test(seg) && seg.length < 80 && !seg.includes('@') && !/\d/.test(seg);
+
 /* ─────────────────────────── parse ─────────────────────────── */
 
 const sure = <T>(value: T): ParsedField<T> => ({ value, confidence: 'high', reason: null });
@@ -205,10 +211,21 @@ export function parseResume(raw: string): ParsedResume {
     : unsure('', 'low', 'no surname could be separated from the first line');
 
   // ── title and location: the two lines under the name, when they fit ──
-  const second = lines[1] ?? '';
-  const currentTitle = looksLikeName && second !== '' && !second.includes('@') && second.length < 60
-    ? unsure(second, 'medium', 'the line under your name — often a title, sometimes a tagline')
-    : unsure('', 'low', 'no line under your name looked like a job title');
+  // The title is often not the very next line: "Name / contact line / Title"
+  // is as common as "Name / Title / contact line". So the first of the next
+  // three lines that is not contact details, a URL or a section heading. Still
+  // only medium — a tagline passes every one of these tests.
+  const isContact = (l: string): boolean =>
+    l.includes('@') || /linkedin\.com|https?:\/\/|www\./i.test(l) || /\d{5,}|\+\d/.test(l)
+    || l.split(/\s+[-–—|·]\s+/).length > 2;
+  const isHeading = (l: string): boolean => Object.values(SECTION).some((re) => re.test(l));
+  const titleLine = looksLikeName
+    ? lines.slice(1, 4).find((l) => !isContact(l) && !isHeading(l) && l.length < 60
+      && !DATE_RANGE.test(l) && !isPlace(l))
+    : undefined;
+  const currentTitle = titleLine
+    ? unsure(titleLine, 'medium', 'a line near your name — often a title, sometimes a tagline')
+    : unsure('', 'low', 'no line near your name looked like a job title');
 
   // The contact line usually carries the location beside the email and phone:
   // "priya@x.in - +91 98290 41765 - Jodhpur, Rajasthan, India". Skipping every
@@ -217,10 +234,7 @@ export function parseResume(raw: string): ParsedResume {
   const locationLine = lines.slice(0, 6)
     .flatMap((l) => l.split(/\s+[-–—|·]\s+/))
     .map((seg) => seg.trim())
-    .find((seg) => /^[\p{L} .'-]+,[\p{L} ,.'-]+$/u.test(seg)
-      && seg.length < 80
-      && !seg.includes('@')
-      && !/\d/.test(seg));
+    .find(isPlace);
   const location = locationLine
     ? unsure(locationLine, 'low',
       "guessed from a line near the top — check it is your location, not an employer's")
@@ -255,7 +269,11 @@ export function parseResume(raw: string): ParsedResume {
   // ── experience ──
   const roles: ParsedRole[] = [];
   if (expAt >= 0) {
-    const endAt = lines.slice(expAt + 1).findIndex((l) => SECTION.education.test(l) || SECTION.other.test(l));
+    // Skills ends the block too. It used not to, so a SKILLS heading after the
+    // roles was read as more experience and "Python, SQL, Airflow…" came back
+    // as a third job titled "Python" with no dates.
+    const endAt = lines.slice(expAt + 1).findIndex((l) =>
+      SECTION.education.test(l) || SECTION.other.test(l) || SECTION.skills.test(l));
     const block = lines.slice(expAt + 1, endAt === -1 ? lines.length : expAt + 1 + endAt);
 
     let current: ParsedRole | null = null;
@@ -286,17 +304,31 @@ export function parseResume(raw: string): ParsedResume {
       // common shape, and an earlier version demanded whitespace on both sides
       // of every separator, so it matched nothing and every résumé came back
       // with zero roles.
-      const split = line
+      // A trailing "— Pune" / "| Bengaluru, India" is where the role was, not
+      // part of the employer's name. Treating every separator alike stored
+      // "Example Analytics Pvt Ltd, Bengaluru" as the company, and that exact
+      // string went into every "Current company" field on every form. Only a
+      // dash or bar marks it, and only a place-shaped tail qualifies — so
+      // "Acme — Inc" or "Tessellate Labs | Remote team" stay in the name.
+      const tail = line.match(/\s+[—–|]\s+([^—–|]+)$/);
+      const tailText = tail?.[1]?.trim() ?? '';
+      const tailIsPlace = tail !== null
+        && /^[\p{L} .'-]+(,[\p{L} .'-]+)*$/u.test(tailText)
+        && tailText.split(/\s+/).length <= 4
+        && !/^(inc|ltd|llc|pvt|gmbh|corp|co|plc|limited|remote team)\.?$/i.test(tailText);
+      const head = tailIsPlace ? line.slice(0, tail!.index) : line;
+      const split = head
         .split(/\s*,\s*|\s+at\s+|\s*[—–|]\s*/)
         .map((x) => x.trim())
         .filter((x) => x !== '');
-      if (split.length >= 2 && line.length < 90) {
+      if (split.length >= 2 && head.length < 90) {
         if (current) roles.push(current);
         current = {
           title: unsure(split[0]!.trim(), 'medium', 'split from a "title, company" line'),
           company: unsure(split.slice(1).join(', ').trim(), 'medium', 'split from a "title, company" line'),
           start: unsure('', 'low', 'no date range found for this role'),
           end: unsure(null, 'low', 'no date range found for this role'),
+          ...(tailIsPlace ? { location: unsure(tailText, 'medium', 'the end of the role heading') } : {}),
           bullets: [],
         };
       }

@@ -101,7 +101,11 @@ const VOCAB: readonly string[] = [
 ];
 
 /** Multi-word terms first, so "react native" is not consumed by "react". */
-const SORTED_VOCAB = [...VOCAB].sort((a, b) => b.length - a.length);
+// A Set, because the domain lists overlap ('forecasting' is both analytics and
+// finance) and a term listed twice was matched twice: 502 of 5,402 stored
+// postings carried a repeated skill, which showed on screen as
+// "forecasting · forecasting" and counted twice wherever skills are counted.
+const SORTED_VOCAB = [...new Set(VOCAB)].sort((a, b) => b.length - a.length);
 
 /**
  * Workplace arrangement, ordered by how much each phrase actually commits to.

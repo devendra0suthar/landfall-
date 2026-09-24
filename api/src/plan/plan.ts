@@ -186,7 +186,7 @@ function planQuestion(
     return q.fields.map((f) => ({
       ...base, fieldName: f.name, kind: f.kind,
       source: 'user' as const,
-      reason: 'EEO/demographic — must be answered by the candidate',
+      reason: 'a demographic question — only you can answer it, and skipping it is allowed',
     }));
   }
 
@@ -214,7 +214,7 @@ function planQuestion(
     return q.fields.map((f) => ({
       ...base, fieldName: f.name, kind: f.kind,
       source: 'user' as const,
-      reason: 'consent/attestation — only the candidate can give this',
+      reason: 'asks for your consent or a statement in your name — only you can give it',
     }));
   }
 
@@ -238,7 +238,7 @@ function planQuestion(
     const chosen = isCoverLetter ? textField : fileField;
     const a = { ...base, fieldName: chosen.name, kind: chosen.kind };
     if (isCoverLetter) {
-      return [{ ...a, source: 'generated', reason: 'cover letter — grounded composition' }];
+      return [{ ...a, source: 'generated', reason: 'needs a letter — a draft built from your own facts is further down this page' }];
     }
     return resumePath
       ? [{ ...a, source: 'file', value: resumePath }]
@@ -252,7 +252,7 @@ function planQuestion(
 
     if (f.kind === 'file') {
       if (isCoverLetter) {
-        return [{ ...a, source: 'generated', reason: 'cover letter — grounded composition' }];
+        return [{ ...a, source: 'generated', reason: 'needs a letter — a draft built from your own facts is further down this page' }];
       }
       return resumePath
         ? [{ ...a, source: 'file', value: resumePath }]
@@ -292,7 +292,7 @@ function planQuestion(
           return [{
             ...a, source: 'user', value: hit.value,
             reason: opts.length === 0
-              ? 'select with no options exposed by the API'
+              ? 'a dropdown whose choices only appear on their form — pick it there'
               : `profile value "${hit.value}" matches none of ${opts.length} offered options`,
           }];
         }
@@ -329,7 +329,7 @@ function planQuestion(
       if (bankAnswer.sensitive && match.via === 'pattern') {
         return [{
           ...a, source: 'user',
-          reason: 'legally consequential, matched by family not exact wording — confirm the wording',
+          reason: 'a legal question worded differently from your saved answer — check it still says what you mean',
         }];
       }
 
@@ -341,7 +341,7 @@ function planQuestion(
           return [{
             ...a, source: 'user',
             reason: opts.length === 0
-              ? 'select with no options exposed by the API'
+              ? 'a dropdown whose choices only appear on their form — pick it there'
               : `stored answer matches none of ${opts.length} offered options`,
           }];
         }
@@ -349,7 +349,7 @@ function planQuestion(
         if (bankAnswer.sensitive && m.via === 'substring') {
           return [{
             ...a, source: 'user', value: m.option.label,
-            reason: 'sensitive question, weak option match — confirm before submit',
+            reason: 'our closest match among their options is uncertain — check it before you submit',
           }];
         }
         return [{ ...a, source: 'bank', value: m.option.label, optionValue: m.option.value }];
@@ -364,7 +364,7 @@ function planQuestion(
 
     // Nothing stored. The classifier's verdict decides where it goes.
     if (q.answerability === 'generated') {
-      return [{ ...a, source: 'generated', reason: 'free-text prompt — grounded composition' }];
+      return [{ ...a, source: 'generated', reason: 'needs a written answer from you' }];
     }
 
     /**
@@ -383,14 +383,14 @@ function planQuestion(
     if (/^if (yes|no|you|applicable|selected|other)|^if you'?(re|ve)/.test(q.labelKey)) {
       return [{
         ...a, source: 'user',
-        reason: 'conditional follow-up — depends on an answer above, no dependency in the schema',
+        reason: 'only applies if you chose a particular answer above',
       }];
     }
     return [{
       ...a, source: 'unresolved',
       reason: q.answerability === 'bank'
-        ? 'recurring question with no bank entry yet'
-        : `unhandled ${q.answerability} question`,
+        ? 'no saved answer yet — answer it once and it fills every form that asks'
+        : 'nothing in your profile answers this yet',
     }];
   });
 }

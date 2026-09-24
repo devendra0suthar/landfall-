@@ -114,3 +114,53 @@ test('counts every uncertain field as needing review', () => {
   assert.ok(r.needsReview >= uncertain);
   assert.ok(r.fieldCount > r.needsReview, 'not everything is flagged, or the signal is worthless');
 });
+
+test('a SKILLS heading after the roles ends experience, and a title below the contact line is found', () => {
+  // Found by uploading this exact layout: the skills line came back as a third
+  // role titled "Python", and the title was left blank because line two was
+  // the contact line.
+  const r = parseResume([
+    'Arjun Mehta',
+    'arjun@example.com | +91 90000 00000 | Bengaluru, India',
+    '',
+    'Senior Data Engineer',
+    '',
+    'EXPERIENCE',
+    'Senior Data Engineer, Example Analytics — Bengaluru',
+    'Mar 2022 – Present',
+    '- Built Python and SQL pipelines on Airflow.',
+    'Data Engineer, Sample Retail Co — Pune',
+    'Jul 2019 – Feb 2022',
+    '- Designed Spark jobs on AWS EMR.',
+    '',
+    'SKILLS',
+    'Python, SQL, Airflow, Spark',
+  ].join('\n'));
+
+  assert.equal(r.roles.length, 2, 'the skills line is not a role');
+  assert.equal(r.currentTitle.value, 'Senior Data Engineer');
+  assert.deepEqual(r.skills.map((s) => s.value), ['python', 'sql', 'airflow', 'spark']);
+  assert.equal(r.location.value, 'Bengaluru, India');
+});
+
+test('a location line under the name is not taken as the title', () => {
+  const r = parseResume(['Priya Raman', 'Jodhpur, Rajasthan, India', 'priya@example.in'].join('\n'));
+  assert.equal(r.currentTitle.value, '');
+});
+
+test('a trailing place on a role heading is the role location, not part of the employer', () => {
+  // "Example Analytics Pvt Ltd, Bengaluru" used to be stored as the company,
+  // and went verbatim into every "Current company" field.
+  const r = parseResume([
+    'Arjun Mehta', 'arjun@example.com', '', 'EXPERIENCE',
+    'Senior Data Engineer, Example Analytics Pvt Ltd — Bengaluru',
+    'Mar 2022 – Present',
+    'Analyst at Acme — Inc',
+    'Jan 2020 – Feb 2022',
+  ].join('\n'));
+  assert.equal(r.roles[0]?.company.value, 'Example Analytics Pvt Ltd');
+  assert.equal(r.roles[0]?.location?.value, 'Bengaluru');
+  // A legal suffix after a dash is still the company's name.
+  assert.equal(r.roles[1]?.location, undefined);
+  assert.match(r.roles[1]?.company.value ?? '', /Acme/);
+});

@@ -36,6 +36,24 @@ const SCOPE_COUNTRIES: Record<string, readonly string[]> = {
   NETHERLANDS: ['netherlands', 'holland'],
 };
 
+/**
+ * Location strings that say nothing but "this other country".
+ *
+ * A remote posting with no stated scope whose whole location is "United
+ * States" is remote *within the United States* — that is how every board
+ * writes it. Found by signing in as an India-based candidate: the top two
+ * roles in their run were exactly this, and the first thing a person does
+ * with a list that recommends roles they cannot take is stop trusting it.
+ *
+ * Only exact matches, so "United States or Remote (Global)" and every
+ * multi-location posting stay — the rule is still subtractive and timid.
+ */
+export function bareOtherCountryLocations(excluded: readonly string[]): string[] {
+  return excluded.flatMap((scope) => (SCOPE_COUNTRIES[scope] ?? [])
+    .filter((n) => n.length > 3) // "us"/"uk" alone are too short to trust as a location
+    .flatMap((n) => [n, `remote - ${n}`, `remote, ${n}`, `${n} - remote`, `${n} (remote)`, `remote (${n})`]));
+}
+
 /** The candidate's country, lowercased, from wherever they recorded it. */
 export function countryOf(profile: CandidateProfile): string | null {
   const raw = (profile.country ?? '').trim()
@@ -89,7 +107,16 @@ export function eligibilityWhere(profile: CandidateProfile): Prisma.JobWhereInpu
       {
         OR: [
           { remote: false },
-          { remoteScope: null },
+          // No stated scope stays — unless the location itself is nothing but
+          // another country (see bareOtherCountryLocations). The `location:
+          // null` arm is the same NULL trap as above: NOT(NULL IN …) is NULL.
+          {
+            remoteScope: null,
+            OR: [
+              { location: null },
+              { NOT: { location: { in: bareOtherCountryLocations(excluded), mode: 'insensitive' } } },
+            ],
+          },
           { NOT: { remoteScope: { in: excluded } } },
         ],
       },

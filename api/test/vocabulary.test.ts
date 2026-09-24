@@ -89,3 +89,10 @@ test('dotted terms survive the fix that allowed full stops', () => {
   assert.ok(!dotted.includes('node'), '"node" must not match inside "node.js"');
   assert.ok(termsIn('Experience with ci/cd and c++.').includes('c++'));
 });
+
+test('a term is found once, however many domain lists carry it', () => {
+  // 'forecasting' sits in both the analytics and the finance lists.
+  const found = termsIn('Own forecasting for the finance team; forecasting models in Python.');
+  assert.equal(found.filter((t) => t === 'forecasting').length, 1);
+  assert.equal(new Set(found).size, found.length);
+});

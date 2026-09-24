@@ -56,6 +56,18 @@ function claimingAllowed(): boolean {
   return process.env.NODE_ENV !== 'production';
 }
 
+/**
+ * The 10/min limit on this scope exists to make password and email guessing
+ * expensive. These routes prove nothing and guess nothing, so they get the
+ * global budget instead. `/me` especially: every page load calls it, the limit
+ * is per IP, and a shared office, campus or carrier-NAT address burned through
+ * ten in a minute — at which point the app read the 429 as "signed out" and
+ * bounced people to the sign-in screen with no explanation.
+ */
+const RELAXED = {
+  config: { rateLimit: { max: Number(process.env.RATE_LIMIT_MAX ?? 600), timeWindow: '1 minute' } },
+};
+
 export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/auth/signup', async (req, reply) => {
     const parsed = Credentials.safeParse(req.body);
@@ -113,7 +125,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ id: candidate.id, email: candidate.email });
   });
 
-  app.post('/api/auth/logout', async (req, reply) => {
+  app.post('/api/auth/logout', RELAXED, async (req, reply) => {
     await endSession(req, reply);
     return reply.send({ ok: true });
   });
@@ -125,7 +137,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
    * expected answer on a first visit, and a 401 in the console on every cold
    * load trains people to ignore 401s.
    */
-  app.get('/api/auth/me', async (req, reply) => {
+  app.get('/api/auth/me', RELAXED, async (req, reply) => {
     const session = await sessionFromRequest(req);
     if (!session) return reply.send({ candidate: null });
 
@@ -236,7 +248,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  app.get('/api/auth/extension', async (req, reply) => {
+  app.get('/api/auth/extension', RELAXED, async (req, reply) => {
     const candidateId = await requireCandidate(req, reply);
     if (!candidateId) return reply;
     return reply.send({ tokens: await listExtensionTokens(candidateId) });
@@ -262,7 +274,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
  * here to guess.
  */
 export async function registerGoogleRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/api/auth/google/available', async () => ({ available: googleConfig() !== null }));
+  app.get('/api/auth/google/available', RELAXED, async () => ({ available: googleConfig() !== null }));
 
   app.get('/api/auth/google', async (req, reply) => {
     const cfg = googleConfig();

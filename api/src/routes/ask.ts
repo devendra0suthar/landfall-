@@ -4,11 +4,10 @@ import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { requireCandidate } from '../auth/session.js';
 import { loadProfile, toIndexed } from '../profile/load.js';
-import { eligibilityWhere } from '../jobs/eligibility.js';
 import { rankedJobIds } from '../jobs/ranking.js';
 import { scoreJob } from '../score/score.js';
-import { chipsFor, parseAsk, titleHasPhrase, titleMatches, whereFor, withoutPart, type AskFilters } from '../ask/parse.js';
-import type { CandidateProfile } from '../plan/types.js';
+import { chipsFor, parseAsk, withoutPart, type AskFilters } from '../ask/parse.js';
+import { matchingIds } from '../ask/search.js';
 
 /**
  * POST /api/ask — one turn of "Ask Landfall".
@@ -23,7 +22,7 @@ import type { CandidateProfile } from '../plan/types.js';
  * screen — the chat is another way in, not another source of truth.
  */
 
-const Filters = z.object({
+export const Filters = z.object({
   words: z.array(z.string().max(40)).max(12),
   skills: z.array(z.string().max(40)).max(12),
   place: z.object({ label: z.string().max(40), terms: z.array(z.string().max(40)).max(10) }).nullable(),
@@ -36,6 +35,8 @@ const Filters = z.object({
 const Body = z.object({
   text: z.string().trim().max(300).optional(),
   filters: Filters.nullable().optional(),
+  /** Opening a saved search: postings first seen after this are marked new. */
+  newSince: z.string().datetime().optional(),
 }).strict();
 
 /** Company names change only on ingest; no need to ask on every turn. */
@@ -48,35 +49,6 @@ async function companyNames(): Promise<string[]> {
 }
 
 const SHOW = 8;
-
-/**
- * Every open posting matching the filters, as ids.
- *
- * Title words are narrowed in SQL with `contains` and then checked as whole
- * words here (see titleMatches) — SQL alone matched "data" inside "Database".
- * The candidate set after the SQL narrowing is small, so this costs little.
- */
-async function matchingIds(f: AskFilters, profile: CandidateProfile | null): Promise<{
-  ids: string[]; eligibilityApplied: boolean; titleMatch: 'phrase' | 'words' | null;
-}> {
-  // Eligibility applies unless they named a place: someone who asks for
-  // "jobs in London" has told us where they want to look, and quietly
-  // hiding London because their profile says India would be overruling them.
-  const eligibility = profile && !f.place ? eligibilityWhere(profile) : {};
-  const where: Prisma.JobWhereInput = {
-    AND: [whereFor(f), eligibility, { closedAt: null }, { board: { disabled: false } }],
-  };
-  const rows = await prisma.job.findMany({ where, select: { id: true, title: true } });
-  const eligibilityApplied = Object.keys(eligibility).length > 0;
-  if (f.words.length === 0) return { ids: rows.map((r) => r.id), eligibilityApplied, titleMatch: null };
-  // The phrase as typed first; every word anywhere only if no title has it —
-  // and the reply says which, so a loose match is never passed off as exact.
-  const phrase = rows.filter((r) => titleHasPhrase(r.title, f.words));
-  if (phrase.length > 0 || f.words.length < 2) {
-    return { ids: phrase.map((r) => r.id), eligibilityApplied, titleMatch: 'phrase' };
-  }
-  return { ids: rows.filter((r) => titleMatches(r.title, f.words)).map((r) => r.id), eligibilityApplied, titleMatch: 'words' };
-}
 
 export async function registerAskRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/ask', async (req, reply) => {
@@ -129,6 +101,20 @@ export async function registerAskRoutes(app: FastifyInstance): Promise<void> {
       loosen ??= roleless;
     }
 
+    const newSince = body.data.newSince ? new Date(body.data.newSince) : null;
+    // New ones first when opening a saved search: they are why it was opened.
+    if (newSince && total > 0) {
+      const fresh = (await prisma.job.findMany({
+        where: { id: { in: found.ids }, firstSeenAt: { gt: newSince } },
+        select: { id: true },
+      })).map((r) => r.id);
+      const freshSet = new Set(fresh);
+      const ranked = profile
+        ? (await rankedJobIds(candidateId, profile, (await prisma.profile.findUnique({ where: { candidateId }, select: { updatedAt: true } }))?.updatedAt.toISOString() ?? '', matchWhere)).ids
+        : ids;
+      ids = [...ranked.filter((id) => freshSet.has(id)), ...ranked.filter((id) => !freshSet.has(id))].slice(0, SHOW);
+    }
+
     const rows = await prisma.job.findMany({
       where: { id: { in: ids } },
       include: { board: { select: { slug: true } }, _count: { select: { questions: true } } },
@@ -149,6 +135,7 @@ export async function registerAskRoutes(app: FastifyInstance): Promise<void> {
         match: profile ? scoreJob(toIndexed(j, j.board.slug), null, profile).match.score : null,
         formReadable: j.formFetchedAt !== null && j.formReadable,
         questions: j.formFetchedAt ? j._count.questions : null,
+        isNew: newSince !== null && j.firstSeenAt > newSince,
       }];
     });
 

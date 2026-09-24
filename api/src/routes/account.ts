@@ -52,6 +52,7 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
         resumes: true,
         bankAnswers: true,
         variants: true,
+        searches: true,
         applications: { include: { job: true, sent: true } },
       },
     });
@@ -133,6 +134,7 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
         resumes,
         applications,
         savedAnswers: candidate.bankAnswers.map((b) => ({ question: b.labelKey, answer: b.value })),
+        savedSearches: candidate.searches.map((s) => ({ search: s.label, filters: s.filters, savedAt: s.createdAt })),
         variants: candidate.variants.map((v) => ({
           name: v.name, currentTitle: v.currentTitle, skills: v.skills, active: v.active,
         })),

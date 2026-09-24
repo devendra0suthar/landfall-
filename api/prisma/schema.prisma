@@ -70,6 +70,7 @@ model Candidate {
   resumes      ResumeFile[]
   applications Application[]
   bankAnswers  BankAnswer[]
+  searches     SavedSearch[]
   variants     Variant[]
   sessions     Session[]
 }
@@ -275,6 +276,9 @@ model Job {
   /// it; cleared if it comes back. Closed jobs leave the index and the run but
   /// are never deleted — the candidate's Applied history points at them.
   closedAt      DateTime?
+  /// When this posting first entered the index. Unlike fetchedAt it is never
+  /// rewritten, so "new since you last looked" has something to compare to.
+  firstSeenAt   DateTime @default(now())
   fetchedAt     DateTime @default(now())
 
   questions    Question[]
@@ -284,6 +288,7 @@ model Job {
   @@index([country])
   @@index([postedAt])
   @@index([closedAt])
+  @@index([firstSeenAt])
 }
 
 /// One field on an employer's application form, as the vendor describes it.
@@ -387,4 +392,22 @@ model Variant {
   active       Boolean @default(false)
 
   @@unique([candidateId, name])
+}
+
+/// A search from Ask Landfall the candidate chose to keep. The filters are the
+/// same shape the chat sends each turn, so reopening one is just a turn.
+/// Deleted with the candidate, and included in their export.
+model SavedSearch {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  /// What the chat said back ("software engineer roles in Bengaluru").
+  label      String
+  filters    Json
+  createdAt  DateTime @default(now())
+  /// Postings first seen after this are "new" for this search.
+  lastSeenAt DateTime @default(now())
+
+  @@index([candidateId])
 }

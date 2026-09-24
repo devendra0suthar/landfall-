@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
-import type { AskFilters, AskReply } from '../api.js';
+import type { AskFilters, AskReply, SavedSearch } from '../api.js';
 
 /**
  * Ask Landfall — job search as a conversation.
@@ -58,7 +58,7 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
 
   useEffect(() => { save(turns); end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }); }, [turns]);
 
-  async function send(body: { text?: string; filters?: AskFilters | null }, shown: Turn): Promise<void> {
+  async function send(body: { text?: string; filters?: AskFilters | null; newSince?: string }, shown: Turn): Promise<void> {
     setBusy(true);
     setTurns((t) => [...t, shown]);
     try {
@@ -77,9 +77,34 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
     void send({ text: clean, filters: last?.filters ?? null }, { me: clean });
   }
 
-  // Arriving from the search bar on Jobs (#/ask/<text>) asks straight away.
+  /**
+   * Opening a saved search (#/ask/@<id>, from Apply): its filters are the turn,
+   * the jobs that arrived since it was last opened come first and are marked,
+   * and it is marked seen so the count on Apply goes back to zero.
+   */
+  async function openSaved(id: string): Promise<void> {
+    try {
+      const list = await api<{ rows: SavedSearch[] }>('/api/searches');
+      const saved = list.rows.find((r) => r.id === id);
+      if (!saved) { setTurns((t) => [...t, { error: 'that saved search no longer exists' }]); return; }
+      await send(
+        { filters: saved.filters, newSince: saved.lastSeenAt },
+        { did: saved.newCount > 0 ? `Opened “${saved.label}” — ${saved.newCount} new since you last looked` : `Opened “${saved.label}”` },
+      );
+      await api(`/api/searches/${encodeURIComponent(id)}/seen`, { method: 'POST' });
+    } catch (e) {
+      setTurns((t) => [...t, { error: (e as Error).message }]);
+    }
+  }
+
+  // Arriving from the search bar on Jobs (#/ask/<text>) asks straight away;
+  // #/ask/@<id> opens a saved search instead.
   useEffect(() => {
-    if (initial && !started.current) { started.current = true; ask(initial); }
+    if (initial && !started.current) {
+      started.current = true;
+      if (initial.startsWith('@')) void openSaved(initial.slice(1));
+      else ask(initial);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
 
@@ -191,6 +216,18 @@ function Reply({ r, first, live }: { r: AskReply; first: boolean; live: boolean 
 
   const top = r.items[0]?.match ?? null;
   const shown = r.items.length;
+  const fresh_ = r.items.filter((i) => i.isNew).length;
+  // Opened from a saved search: the new ones lead, so "the top one fits you
+  // best" would be untrue — say what the order actually is.
+  if (fresh_ > 0) {
+    return (
+      <p>
+        I found <strong>{r.total.toLocaleString()} {describe(r.filters, r.total)}</strong>.{' '}
+        <strong>{fresh_} {fresh_ === 1 ? 'is' : 'are'} new</strong> since you last looked — shown first,
+        then your best fits.
+      </p>
+    );
+  }
   return (
     <>
       <p>
@@ -234,6 +271,8 @@ function Answer({ r, live, first, onRemove }: {
 
       {r.notes.map((n) => <p key={n} className="sub">{n}</p>)}
 
+      {live && r.chips.length > 0 && <SaveSearch filters={r.filters} />}
+
       {r.loosen && live && (
         <button className="btn" onClick={() => onRemove(r.loosen!.key, r.loosen!.label)}>
           Drop {r.loosen.label} → {r.loosen.total.toLocaleString()} role{r.loosen.total === 1 ? '' : 's'}
@@ -245,7 +284,7 @@ function Answer({ r, live, first, onRemove }: {
           {r.items.map((j) => (
             <div key={j.jobId} className="chat-job">
               <div style={{ minWidth: 0 }}>
-                <strong>{j.title}</strong>
+                <strong>{j.isNew && <span className="chip ok new-badge">New</span>}{j.title}</strong>
                 <div className="sub">
                   {j.company}{j.location ? ` · ${j.location}` : ''}{j.match !== null ? ` · ${j.match}/100 match` : ''}
                 </div>
@@ -262,5 +301,47 @@ function Answer({ r, live, first, onRemove }: {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Keep this search, and hear about what arrives. The index refreshes daily; a
+ * saved search shows on Apply with the number of new matches since it was
+ * last opened. Saved the way the chat said it back, so the list reads.
+ */
+function SaveSearch({ filters }: { filters: AskFilters }): React.ReactElement {
+  const [state, setState] = useState<'idle' | 'busy' | 'saved' | 'already'>('idle');
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save(): Promise<void> {
+    setState('busy');
+    setErr(null);
+    try {
+      const r = await api<{ already: boolean }>('/api/searches', {
+        method: 'POST',
+        body: JSON.stringify({ label: describe(filters, 2), filters }),
+      });
+      setState(r.already ? 'already' : 'saved');
+    } catch (e) {
+      setErr((e as Error).message);
+      setState('idle');
+    }
+  }
+
+  if (state === 'saved' || state === 'already') {
+    return (
+      <p className="sub">
+        {state === 'saved' ? 'Saved.' : 'You already saved this one.'} New matches will show on{' '}
+        <a href="#/run">Apply</a> as they arrive.
+      </p>
+    );
+  }
+  return (
+    <p>
+      <button className="btn" disabled={state === 'busy'} onClick={() => void save()}>
+        Save this search — tell me when new ones arrive
+      </button>
+      {err && <span className="sub" role="alert"> {err}</span>}
+    </p>
   );
 }

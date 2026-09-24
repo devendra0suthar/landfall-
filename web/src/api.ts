@@ -512,5 +512,17 @@ export interface AskReply {
   items: Array<{
     jobId: string; title: string; company: string; location: string | null; url: string;
     posted: string | null; match: number | null; formReadable: boolean; questions: number | null;
+    /** Only when opened from a saved search: first seen since it was last opened. */
+    isNew?: boolean;
   }>;
+}
+
+export interface SavedSearch {
+  id: string;
+  label: string;
+  filters: AskFilters;
+  total: number;
+  /** Open postings matching it that entered the index since it was last opened. */
+  newCount: number;
+  lastSeenAt: string;
 }

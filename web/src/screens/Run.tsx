@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { State, useAsync } from '../App.js';
 import { api } from '../api.js';
-import type { RunResponse, RunItem, GapReport, GapRow } from '../api.js';
+import type { RunResponse, RunItem, GapReport, GapRow, SavedSearch } from '../api.js';
 
 /**
  * The run — your next applications, already prepared.
@@ -28,6 +28,7 @@ export function Run(): React.ReactElement {
   const run = useAsync(() => api<RunResponse>(`/api/run?limit=${size}`), [size]);
   const d = run.data;
   const gaps = useAsync(() => api<GapReport>('/api/gaps'), []);
+  const saved = useAsync(() => api<{ rows: SavedSearch[] }>('/api/searches'), []);
 
   return (
     <>
@@ -67,6 +68,8 @@ export function Run(): React.ReactElement {
                   onSaved={() => { gaps.reload(); run.reload(); }}
                 />
               )}
+
+              {saved.data && <SavedSearches rows={saved.data.rows} onChange={saved.reload} />}
 
               {d.available > d.items.length && (
                 <p className="sub">
@@ -295,6 +298,58 @@ function QuickRow({ g, onSaved }: { g: QuickGroup; onSaved: () => void }): React
           {err && <span className="sub" role="alert">{err}</span>}
         </form>
       )}
+    </div>
+  );
+}
+
+/**
+ * The alert, where people already look. The index refreshes daily; each saved
+ * search here says how many open matches arrived since it was last opened.
+ * Newest-news first, so the one with something to read leads.
+ */
+function SavedSearches({ rows, onChange }: { rows: SavedSearch[]; onChange: () => void }): React.ReactElement {
+  if (rows.length === 0) {
+    return (
+      <p className="sub">
+        Looking for something specific? <a href="#/ask">Ask for it in your own words</a> and save the
+        search — new matches will show up here.
+      </p>
+    );
+  }
+  const sorted = [...rows].sort((a, b) => b.newCount - a.newCount);
+  const fresh = rows.reduce((n, r) => n + r.newCount, 0);
+
+  async function remove(id: string): Promise<void> {
+    try { await api(`/api/searches/${encodeURIComponent(id)}`, { method: 'DELETE' }); } finally { onChange(); }
+  }
+
+  return (
+    <div className="card flow">
+      <header>
+        <span className="lbl">Your saved searches</span>
+        <span className="sub">{fresh > 0 ? `${fresh} new job${fresh === 1 ? '' : 's'} since you last looked` : 'nothing new yet — checked daily'}</span>
+      </header>
+      <div className="rows">
+        {sorted.map((r) => (
+          <div key={r.id} className="row split">
+            <div style={{ minWidth: 0 }}>
+              <strong>{r.label}</strong>
+              <div className="sub">
+                {r.newCount > 0 && <><span className="chip ok">{r.newCount} new</span>{' '}</>}
+                {r.total.toLocaleString()} open now
+              </div>
+            </div>
+            <div className="quick-actions">
+              <a className={r.newCount > 0 ? 'btn p' : 'btn'} href={`#/ask/@${r.id}`}>
+                {r.newCount > 0 ? 'See what’s new' : 'Open'}
+              </a>
+              <button className="btn linkish quiet" aria-label={`Remove saved search ${r.label}`} onClick={() => void remove(r.id)}>
+                Remove
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

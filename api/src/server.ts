@@ -24,6 +24,7 @@ import { registerSuggestRoutes } from './routes/suggest.js';
 import { scheduleIndexRefresh } from './ingest/refresh.js';
 import { registerRunRoutes } from './routes/run.js';
 import { registerAskRoutes } from './routes/ask.js';
+import { registerSearchRoutes } from './routes/searches.js';
 
 /**
  * The API, and in production the front end too.
@@ -84,8 +85,20 @@ await app.register(async (scope) => {
 await registerGoogleRoutes(app);
 
 app.get('/api/health', async () => {
-  const jobs = await prisma.job.count();
-  return { ok: true, jobs, region: process.env.LANDFALL_REGION ?? 'ap-south-1' };
+  const [jobs, open, oldest] = await Promise.all([
+    prisma.job.count(),
+    prisma.job.count({ where: { closedAt: null } }),
+    prisma.board.findFirst({ where: { disabled: false }, orderBy: { lastFetchedAt: 'asc' }, select: { lastFetchedAt: true } }),
+  ]);
+  return {
+    ok: true,
+    jobs,
+    open,
+    // How stale the index is, from outside. Production once sat on its
+    // day-one data with nothing showing it; this is the number to watch.
+    indexedAt: oldest?.lastFetchedAt?.toISOString() ?? null,
+    region: process.env.LANDFALL_REGION ?? 'ap-south-1',
+  };
 });
 
 await registerJobRoutes(app);
@@ -94,6 +107,7 @@ await registerTemplateRoutes(app);
 await registerKitRoutes(app);
 await registerRunRoutes(app);
 await registerAskRoutes(app);
+await registerSearchRoutes(app);
 await registerAnalyzeRoutes(app);
 await registerResumeRoutes(app);
 await registerApplicationRoutes(app);

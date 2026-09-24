@@ -80,8 +80,8 @@ export async function refreshIndex(
 let running = false;
 
 export function scheduleIndexRefresh(log: (line: string) => void): void {
-  const hours = Number(process.env.INDEX_REFRESH_HOURS);
-  if (!Number.isFinite(hours) || hours <= 0) return;
+  const hours = refreshHours(process.env);
+  if (hours === null) return;
 
   const check = async (): Promise<void> => {
     if (running) return;
@@ -103,6 +103,24 @@ export function scheduleIndexRefresh(log: (line: string) => void): void {
   // A minute after boot, so start-up (and migrations) finish first.
   setTimeout(() => { void check(); }, 60_000).unref();
   setInterval(() => { void check(); }, 60 * 60_000).unref();
+}
+
+/**
+ * How often to refresh, or null for never.
+ *
+ * On by default in production (24 h), off by default everywhere else. It was
+ * opt-in only, set in render.yaml — and the blueprint never applied it to the
+ * running service, so production sat on the day-one index: 5,402 jobs, none
+ * ever closed, while a local refresh had already found 168 taken down and 157
+ * new. A setting that has to be remembered in a dashboard is one that is not
+ * set. `INDEX_REFRESH_HOURS=0` still turns it off; a laptop never crawls on
+ * its own because NODE_ENV is not production there.
+ */
+export function refreshHours(env: NodeJS.ProcessEnv): number | null {
+  const raw = env.INDEX_REFRESH_HOURS;
+  if (raw === undefined || raw.trim() === '') return env.NODE_ENV === 'production' ? 24 : null;
+  const hours = Number(raw);
+  return Number.isFinite(hours) && hours > 0 ? hours : null;
 }
 
 /** Stale when the least recently read enabled board is older than `hours`. */

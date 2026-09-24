@@ -88,8 +88,8 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
       <div className="head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="lbl">Ask Landfall</span>
-          <h1>Tell me what you’re looking for</h1>
-          <p className="sub">In your own words. Every job shown is a real, open posting.</p>
+          <h1>What kind of job are you looking for?</h1>
+          <p className="sub">Just say it the way you would to a friend. I only ever show real, open jobs.</p>
         </div>
         {turns.length > 0 && (
           <button className="btn" onClick={() => setTurns([])}>New conversation</button>
@@ -99,7 +99,7 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
       <div className="body chat">
         {turns.length === 0 && (
           <div className="chat-empty">
-            <p className="sub">Try one of these, or type your own:</p>
+            <p className="sub">Not sure how to put it? Tap one of these to start:</p>
             <div className="chat-examples">
               {EXAMPLES.map((e) => <button key={e} className="btn" onClick={() => ask(e)}>{e}</button>)}
             </div>
@@ -109,17 +109,18 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
         {turns.map((t, i) => (
           t.me ? <div key={i} className="msg me">{t.me}</div>
             : t.did ? <div key={i} className="msg did">{t.did}</div>
-              : t.error ? <div key={i} className="msg bot" role="alert"><p>Something went wrong: {t.error}</p></div>
+              : t.error ? <div key={i} className="msg bot" role="alert"><p>Sorry — I couldn’t search just now ({t.error}). Please try again.</p></div>
                 : t.reply ? (
                   <Answer
                     key={i}
                     r={t.reply}
                     live={t.reply === last}
+                    first={turns.findIndex((x) => x.reply) === i}
                     onRemove={(key, label) => void send({ filters: withoutPart(t.reply!.filters, key) }, { did: `Removed “${label}”` })}
                   />
                 ) : null
         ))}
-        {busy && <div className="msg bot" aria-live="polite"><p className="sub">Looking…</p></div>}
+        {busy && <div className="msg bot" aria-live="polite"><p className="sub">Searching open jobs…</p></div>}
         <div ref={end} />
       </div>
 
@@ -138,20 +139,84 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
   );
 }
 
-function sentence(r: AskReply): string {
-  if (r.unchanged) return 'I didn’t catch anything new in that — here’s the same search.';
-  if (r.chips.length === 0) return `Here are the best of ${r.total.toLocaleString()} open roles.`;
-  if (r.total === 0) return 'Nothing open matches all of that.';
-  const n = `${r.total.toLocaleString()} open role${r.total === 1 ? '' : 's'} match${r.total === 1 ? 'es' : ''}`;
-  return r.titleMatch === 'words' ? `${n} — no title has those exact words together, so these have all of them.` : `${n}.`;
+/**
+ * The request said back in plain English: "senior remote software engineer
+ * roles in Bengaluru at Stripe, posted in the last 7 days".
+ *
+ * The reply used to be "53 open roles match." — correct and cold. Repeating
+ * what was asked is what makes it read as understood, and it is the check a
+ * person needs: if the sentence is wrong, the search is wrong.
+ */
+function describe(f: AskFilters, n: number): string {
+  const LEVEL: Record<string, string> = {
+    intern: 'intern', junior: 'junior', mid: 'mid-level', senior: 'senior', staff: 'staff', manager: 'manager',
+  };
+  const adjectives = [
+    f.level ? LEVEL[f.level] : null,
+    f.workplace ? (f.workplace === 'onsite' ? 'on-site' : f.workplace) : null,
+  ].filter(Boolean).join(' ');
+  const noun = n === 1 ? 'role' : 'roles';
+  const role = f.words.length ? `${f.words.join(' ')} ${noun}` : noun;
+  const skills = f.skills.length ? ` using ${f.skills.join(' and ')}` : '';
+  const place = f.place ? ` in ${f.place.label}` : '';
+  const company = f.company ? ` at ${f.company.replace(/,?\s*Inc\.?$|\s*Job Board$/, '')}` : '';
+  const when = f.days ? (f.days === 1 ? ', posted today' : `, posted in the last ${f.days} days`) : '';
+  return `${adjectives ? `${adjectives} ` : ''}${role}${skills}${place}${company}${when}`;
 }
 
-function Answer({ r, live, onRemove }: {
-  r: AskReply; live: boolean; onRemove: (key: string, label: string) => void;
+function Reply({ r, first, live }: { r: AskReply; first: boolean; live: boolean }): React.ReactElement {
+  const fresh = r.reset ? 'New search. ' : '';
+
+  if (r.unchanged) {
+    return (
+      <p>
+        I didn’t pick out anything new there, so this is the same search again. Try a role, a
+        city, “remote”, or “this week”.
+      </p>
+    );
+  }
+
+  if (r.chips.length === 0) {
+    return <p>{fresh}Here are the best of the <strong>{r.total.toLocaleString()}</strong> open roles for you.</p>;
+  }
+
+  if (r.total === 0) {
+    return (
+      <p>
+        {fresh}I couldn’t find any <strong>{describe(r.filters, 0)}</strong> open right now.{' '}
+        {r.loosen ? (live ? 'One change would help:' : '') : 'Try fewer details, or start a new search.'}
+      </p>
+    );
+  }
+
+  const top = r.items[0]?.match ?? null;
+  const shown = r.items.length;
+  return (
+    <>
+      <p>
+        {fresh}I found <strong>{r.total.toLocaleString()} {describe(r.filters, r.total)}</strong>.
+        {r.total > shown
+          ? ` Here are the ${shown} that fit you best${top !== null ? ` — the top one is a ${top}/100 match` : ''}.`
+          : top !== null && r.total > 1 ? ` Best fit first — the top one is a ${top}/100 match.` : ''}
+      </p>
+      {r.titleMatch === 'words' && (
+        <p className="sub">
+          None have exactly “{r.filters.words.join(' ')}” in the title, so these have all of those words.
+        </p>
+      )}
+      {first && (
+        <p className="sub">You can narrow it down — try “only this week”, “hybrid” or “at Stripe”.</p>
+      )}
+    </>
+  );
+}
+
+function Answer({ r, live, first, onRemove }: {
+  r: AskReply; live: boolean; first: boolean; onRemove: (key: string, label: string) => void;
 }): React.ReactElement {
   return (
     <div className="msg bot">
-      <p>{r.reset ? 'Starting fresh. ' : ''}{sentence(r)}</p>
+      <Reply r={r} first={first} live={live} />
 
       {r.chips.length > 0 && (
         <div className="chat-chips" aria-label="How I read that">
@@ -171,7 +236,7 @@ function Answer({ r, live, onRemove }: {
 
       {r.loosen && live && (
         <button className="btn" onClick={() => onRemove(r.loosen!.key, r.loosen!.label)}>
-          Try without {r.loosen.label} → {r.loosen.total.toLocaleString()} role{r.loosen.total === 1 ? '' : 's'}
+          Drop {r.loosen.label} → {r.loosen.total.toLocaleString()} role{r.loosen.total === 1 ? '' : 's'}
         </button>
       )}
 
@@ -182,7 +247,7 @@ function Answer({ r, live, onRemove }: {
               <div style={{ minWidth: 0 }}>
                 <strong>{j.title}</strong>
                 <div className="sub">
-                  {j.company}{j.location ? ` · ${j.location}` : ''}{j.match !== null ? ` · match ${j.match}` : ''}
+                  {j.company}{j.location ? ` · ${j.location}` : ''}{j.match !== null ? ` · ${j.match}/100 match` : ''}
                 </div>
               </div>
               <div className="chat-job-actions">

@@ -51,3 +51,13 @@ test('a refresh closes postings only when the board was reached and listed somet
   assert.equal(postingsToClose(true, []).act, false);
   assert.deepEqual(postingsToClose(true, ['1', '2']), { act: true, stillListed: ['1', '2'] });
 });
+
+test('the index refreshes itself in production unless told not to, and never on a laptop by default', async () => {
+  // It was opt-in via render.yaml, the setting never reached the service, and
+  // production stayed on its day-one index.
+  const { refreshHours } = await import('../src/ingest/refresh.js');
+  assert.equal(refreshHours({ NODE_ENV: 'production' }), 24);
+  assert.equal(refreshHours({}), null, 'a dev server never starts crawling by itself');
+  assert.equal(refreshHours({ NODE_ENV: 'production', INDEX_REFRESH_HOURS: '0' }), null, '0 turns it off');
+  assert.equal(refreshHours({ INDEX_REFRESH_HOURS: '6' }), 6);
+});

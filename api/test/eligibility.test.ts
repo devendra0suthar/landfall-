@@ -89,3 +89,12 @@ test('a remote role whose whole location is another country is hidden; their own
   // Two-letter codes are too ambiguous to act on as a whole location.
   assert.ok(!bare.includes('us') && !bare.includes('uk'));
 });
+
+test('countries beyond the scope table are hidden too — but never the candidate\'s own', () => {
+  // Found in Ask: remote roles located "Poland" shown to someone in India.
+  const forIndia = bareOtherCountryLocations(excludedScopes(inIndia()), 'india');
+  assert.ok(forIndia.includes('poland') && forIndia.includes('remote - spain'));
+  const forPoland = bareOtherCountryLocations(excludedScopes(inIndia({ country: 'Poland' })), 'poland');
+  assert.ok(!forPoland.some((l) => l.includes('poland')), 'their own country stays visible');
+  assert.ok(forPoland.includes('india'), 'and India-only remote roles are hidden from them instead');
+});

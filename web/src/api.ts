@@ -486,3 +486,31 @@ export interface RunResponse {
   available: number;
   totals: { prepared: number; yours: number; open: number };
 }
+
+/* ── Ask Landfall ── */
+
+export interface AskFilters {
+  words: string[];
+  skills: string[];
+  place: { label: string; terms: string[] } | null;
+  workplace: 'remote' | 'hybrid' | 'onsite' | null;
+  level: 'intern' | 'junior' | 'mid' | 'senior' | 'staff' | 'manager' | null;
+  company: string | null;
+  days: number | null;
+}
+
+export interface AskReply {
+  filters: AskFilters;
+  chips: Array<{ key: string; label: string }>;
+  notes: string[];
+  reset: boolean;
+  unchanged: boolean;
+  eligibilityApplied: boolean;
+  titleMatch: 'phrase' | 'words' | null;
+  loosen: { key: string; label: string; total: number } | null;
+  total: number;
+  items: Array<{
+    jobId: string; title: string; company: string; location: string | null; url: string;
+    posted: string | null; match: number | null; formReadable: boolean; questions: number | null;
+  }>;
+}

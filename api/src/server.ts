@@ -23,6 +23,7 @@ import { registerAccountRoutes } from './routes/account.js';
 import { registerSuggestRoutes } from './routes/suggest.js';
 import { scheduleIndexRefresh } from './ingest/refresh.js';
 import { registerRunRoutes } from './routes/run.js';
+import { registerAskRoutes } from './routes/ask.js';
 
 /**
  * The API, and in production the front end too.
@@ -92,6 +93,7 @@ await registerPrepareRoutes(app);
 await registerTemplateRoutes(app);
 await registerKitRoutes(app);
 await registerRunRoutes(app);
+await registerAskRoutes(app);
 await registerAnalyzeRoutes(app);
 await registerResumeRoutes(app);
 await registerApplicationRoutes(app);

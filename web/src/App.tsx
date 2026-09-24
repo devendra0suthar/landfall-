@@ -1,5 +1,6 @@
 import { Component, useCallback, useEffect, useState } from 'react';
 import { Jobs } from './screens/Jobs.js';
+import { Ask } from './screens/Ask.js';
 import { Run } from './screens/Run.js';
 import { Kit } from './screens/Kit.js';
 import { Resume } from './screens/Resume.js';
@@ -30,6 +31,7 @@ import type { Me } from './api.js';
 
 type Route =
   | { name: 'jobs' }
+  | { name: 'ask'; q?: string }
   | { name: 'run' }
   /** No hash, or one we do not recognise. Resolved per account below. */
   | { name: 'home' }
@@ -60,6 +62,8 @@ function parse(hash: string): Route {
   if (head === 'parse') return { name: 'parse' };
   if (head === 'profile') return { name: 'profile' };
   if (head === 'jobs') return { name: 'jobs' };
+  // #/ask/<text> arrives from the search bar on Jobs and asks straight away.
+  if (head === 'ask') return id ? { name: 'ask', q: decodeURIComponent(id) } : { name: 'ask' };
   // Anything else — including an empty hash — is 'home', which is resolved
   // against the account rather than being a screen of its own.
   return { name: 'home' };
@@ -199,6 +203,7 @@ export function App(): React.ReactElement {
         {view.name === 'welcome' && <Welcome />}
         {view.name === 'run' && <Run />}
         {view.name === 'jobs' && <Jobs />}
+        {view.name === 'ask' && <Ask key={view.q ?? ''} {...(view.q ? { initial: view.q } : {})} />}
         {view.name === 'kit' && <Kit jobId={view.jobId} />}
         {view.name === 'resume' && <Resume />}
         {view.name === 'improve' && <Improve />}
@@ -308,7 +313,7 @@ export function State({ loading, error, empty, rows = 4, children }: {
 /** Which of the five places a screen belongs to, for the nav highlight. */
 const GROUP: Partial<Record<Route['name'], string>> = {
   run: 'run', kit: 'run',
-  jobs: 'jobs', analyze: 'jobs',
+  jobs: 'jobs', analyze: 'jobs', ask: 'jobs',
   resume: 'resume', profile: 'resume', improve: 'resume', parse: 'resume',
   gaps: 'gaps',
   tracker: 'tracker',
@@ -316,6 +321,7 @@ const GROUP: Partial<Record<Route['name'], string>> = {
 
 const TABS: Record<string, Array<{ name: Route['name']; href: string; label: string }>> = {
   jobs: [
+    { name: 'ask', href: '#/ask', label: 'Ask' },
     { name: 'jobs', href: '#/jobs', label: 'Matched for you' },
     { name: 'analyze', href: '#/analyze', label: 'Paste any job' },
   ],

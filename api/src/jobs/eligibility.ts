@@ -48,11 +48,29 @@ const SCOPE_COUNTRIES: Record<string, readonly string[]> = {
  * Only exact matches, so "United States or Remote (Global)" and every
  * multi-location posting stay — the rule is still subtractive and timid.
  */
-export function bareOtherCountryLocations(excluded: readonly string[]): string[] {
-  return excluded.flatMap((scope) => (SCOPE_COUNTRIES[scope] ?? [])
-    .filter((n) => n.length > 3) // "us"/"uk" alone are too short to trust as a location
-    .flatMap((n) => [n, `remote - ${n}`, `remote, ${n}`, `${n} - remote`, `${n} (remote)`, `remote (${n})`]));
+export function bareOtherCountryLocations(excluded: readonly string[], candidateCountry?: string | null): string[] {
+  const own = (candidateCountry ?? '').toLowerCase();
+  const names = [
+    ...excluded.flatMap((scope) => SCOPE_COUNTRIES[scope] ?? []),
+    // Countries outside the scope table. Found in the chat: an India-based
+    // candidate with "only roles you can take" on was shown remote roles
+    // located "Poland" — 31 of them — because only the table's ten were known.
+    ...WORLD.filter((n) => n !== own && !own.includes(n)),
+  ].filter((n) => n.length > 3); // "us"/"uk" alone are too short to trust as a location
+  return [...new Set(names)]
+    .flatMap((n) => [n, `remote - ${n}`, `remote, ${n}`, `${n} - remote`, `${n}, remote`, `${n} (remote)`, `remote (${n})`]);
 }
+
+/** Country names seen as whole remote locations in the index, beyond SCOPE_COUNTRIES. */
+const WORLD: readonly string[] = [
+  'spain', 'poland', 'portugal', 'greece', 'romania', 'colombia', 'norway', 'switzerland', 'japan',
+  'estonia', 'israel', 'brazil', 'denmark', 'luxembourg', 'philippines', 'mexico', 'south korea',
+  'cyprus', 'france', 'italy', 'sweden', 'finland', 'austria', 'belgium', 'czech republic', 'czechia',
+  'hungary', 'ukraine', 'serbia', 'bulgaria', 'croatia', 'lithuania', 'latvia', 'argentina', 'chile',
+  'peru', 'costa rica', 'turkey', 'united arab emirates', 'saudi arabia', 'egypt', 'south africa',
+  'nigeria', 'kenya', 'new zealand', 'taiwan', 'hong kong', 'china', 'vietnam', 'thailand',
+  'malaysia', 'indonesia', 'pakistan', 'bangladesh', 'sri lanka',
+];
 
 /** The candidate's country, lowercased, from wherever they recorded it. */
 export function countryOf(profile: CandidateProfile): string | null {
@@ -114,7 +132,7 @@ export function eligibilityWhere(profile: CandidateProfile): Prisma.JobWhereInpu
             remoteScope: null,
             OR: [
               { location: null },
-              { NOT: { location: { in: bareOtherCountryLocations(excluded), mode: 'insensitive' } } },
+              { NOT: { location: { in: bareOtherCountryLocations(excluded, country), mode: 'insensitive' } } },
             ],
           },
           { NOT: { remoteScope: { in: excluded } } },

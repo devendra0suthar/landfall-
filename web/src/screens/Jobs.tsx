@@ -111,6 +111,20 @@ export function Jobs(): React.ReactElement {
       </div>
 
       <div className="body">
+        {/* The first place anyone looks for search, and there was none. It
+            hands the words to Ask, which reads them and can be followed up. */}
+        <form
+          className="chat-input search-bar"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = new FormData(e.currentTarget).get('q');
+            if (typeof q === 'string' && q.trim()) window.location.hash = `#/ask/${encodeURIComponent(q.trim())}`;
+          }}
+        >
+          <input name="q" placeholder="Search in your own words — “remote data engineer in Bangalore”" aria-label="Search jobs" />
+          <button className="btn p">Search</button>
+        </form>
+
         {noResume && (
           <div className="note warn">
             <p>Upload your résumé so we can match these to you and fill the forms.</p>

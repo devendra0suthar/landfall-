@@ -5,6 +5,7 @@ import { compilePlan } from '../src/plan/plan.js';
 import { tailor } from '../src/resume/tailor.js';
 import { buildStarter } from '../src/compose/letter.js';
 import { buildKit, formState } from '../src/kit/kit.js';
+import { runRow } from '../src/run/run.js';
 import type { AnswerBank, CandidateProfile } from '../src/plan/types.js';
 import type { FormQuestion, JobPosting } from '../src/ingest/types.js';
 import type { IndexedJob } from '../src/jobs/indexer.js';
@@ -379,4 +380,51 @@ test('asked, evidenced and missing keywords stay separate', () => {
   assert.ok(asked.includes('salesforce'));
   assert.ok(missing.includes('salesforce'));
   assert.ok(!evidenced.includes('salesforce'));
+});
+
+/* ───────────── a run never disagrees with the Kit it links to ───────────── */
+
+test('a run counts exactly what the Kit shows, with and without a résumé on file', () => {
+  // The run once counted every file action as prepared. With no résumé on
+  // file the Kit lists that field as open — so the worklist said "ready" about
+  // the one field every form in the sample asks for, and the Kit it linked to
+  // said otherwise.
+  const plan = compilePlan(posting, profile, bank);
+  for (const attachedFilename of ['Priya Raman CV.pdf', null]) {
+    const kit = buildKit({
+      job: jobRow, plan, formFields: questions.length, tailored, starter, bank, attachedFilename,
+    });
+    const row = runRow({
+      job: jobRow, plan, questions: questions.length, hasAttachment: attachedFilename !== null,
+    });
+    assert.ok(row.ok);
+    assert.deepEqual(
+      { prepared: row.counts.prepared, yours: row.counts.yours, open: row.counts.open },
+      kit.counts,
+      `attachment: ${attachedFilename ?? 'none'}`,
+    );
+  }
+
+  const without = runRow({ job: jobRow, plan, questions: questions.length, hasAttachment: false });
+  const withCv = runRow({ job: jobRow, plan, questions: questions.length, hasAttachment: true });
+  assert.ok(without.ok && withCv.ok);
+  assert.equal(without.counts.prepared, withCv.counts.prepared - 1, 'the résumé field moves, it does not vanish');
+  assert.equal(without.counts.open, withCv.counts.open + 1);
+});
+
+test('a run names an unread form as unread, not as one the employer does not publish', () => {
+  const unread = runRow({
+    job: { formFetchedAt: null, formReadable: false }, plan: null, questions: 0, hasAttachment: true,
+  });
+  const unpublished = runRow({
+    job: { formFetchedAt: new Date('2026-09-20T00:00:00Z'), formReadable: false },
+    plan: compilePlan({ ...posting, questions: [] }, profile, bank),
+    questions: 0,
+    hasAttachment: true,
+  });
+  assert.ok(!unread.ok && !unpublished.ok);
+  assert.match(unread.reason, /not read/);
+  assert.match(unpublished.reason, /publishes no/);
+  // An unpublished form must not become an item reporting "0 fields" either.
+  assert.notEqual(unread.reason, unpublished.reason);
 });

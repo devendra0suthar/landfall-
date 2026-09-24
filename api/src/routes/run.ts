@@ -8,6 +8,7 @@ import { eligibilityWhere } from '../jobs/eligibility.js';
 import { rankedJobIds } from '../jobs/ranking.js';
 import { scoreJob } from '../score/score.js';
 import { toIndexed } from '../profile/load.js';
+import { runRow } from '../run/run.js';
 
 /**
  * A worklist: your best matches, all prepared, in one pass.
@@ -97,6 +98,11 @@ export async function registerRunRoutes(app: FastifyInstance): Promise<void> {
 
     const take = ids.filter((id) => !done.has(id)).slice(0, limit);
     const bank = await loadBank(candidateId);
+    // The same question the Kit asks, so a résumé field with nothing behind it
+    // is open here too rather than counted as prepared.
+    const hasAttachment = (await prisma.resumeFile.count({
+      where: { candidateId, active: true },
+    })) > 0;
 
     const items: RunItem[] = [];
     const couldNotPrepare: Array<{ jobId: string; reason: string }> = [];
@@ -111,20 +117,18 @@ export async function registerRunRoutes(app: FastifyInstance): Promise<void> {
       const posting = await loadPosting(id);
       const plan = posting ? compilePlan(posting, profile, bank) : null;
 
-      if (!plan) {
-        couldNotPrepare.push({ jobId: id, reason: 'this employer publishes no readable form' });
+      // The same buckets the Kit uses, from the same function — a run that
+      // disagreed with the Kit it links to would be worse than no run at all.
+      const row = runRow({
+        job,
+        plan,
+        questions: posting?.questions?.length ?? 0,
+        hasAttachment,
+      });
+      if (!row.ok || !plan) {
+        couldNotPrepare.push({ jobId: id, reason: row.ok ? 'no longer indexed' : row.reason });
         continue;
       }
-
-      // The same three buckets the Kit uses, counted the same way — a run that
-      // disagreed with the Kit it links to would be worse than no run at all.
-      const prepared = plan.actions.filter(
-        (a) => a.source === 'profile' || a.source === 'bank' || a.source === 'file',
-      ).length;
-      const yours = plan.actions.filter((a) => a.source === 'user').length;
-      const open = plan.actions.filter(
-        (a) => a.source === 'unresolved' || a.source === 'generated',
-      ).length;
 
       items.push({
         jobId: job.id,
@@ -136,10 +140,7 @@ export async function registerRunRoutes(app: FastifyInstance): Promise<void> {
         // now that the facts are columns, and one source for the number means
         // the run and the list cannot disagree about it.
         match: scoreJob(toIndexed(job as never, job.board.slug), plan, profile).match.score,
-        prepared,
-        yours,
-        open,
-        fields: job.formFetchedAt ? plan.actions.length : null,
+        ...row.counts,
         applied: false,
       });
     }

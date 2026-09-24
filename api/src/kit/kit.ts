@@ -165,6 +165,32 @@ export function formState(job: {
   return job.formReadable ? 'readable' : 'unpublished';
 }
 
+export type Bucket = 'answers' | 'yours' | 'open';
+
+/**
+ * Which column a planned answer lands in. Shared with the run (routes/run.ts)
+ * so a worklist can never count a question as prepared that the Kit it links
+ * to lists as open — they disagreed about exactly this once, over a résumé
+ * field with no résumé behind it.
+ *
+ * Decided by who may answer it, not by whether we happen to have a value:
+ * 'user' is the share that is theirs by right (FR-6) and is never "prepared".
+ */
+export function bucketFor(source: FillSource, hasAttachment: boolean): Bucket {
+  switch (source) {
+    case 'file':
+      return hasAttachment ? 'answers' : 'open';
+    case 'profile':
+    case 'bank':
+      return 'answers';
+    case 'user':
+      return 'yours';
+    case 'generated':
+    case 'unresolved':
+      return 'open';
+  }
+}
+
 /** The one place the honest phrasing for each state lives. */
 function statementFor(state: FormState, stated: number): string {
   switch (state) {
@@ -318,28 +344,10 @@ export function buildKit(input: KitInput): ApplicationKit {
         read: true,
       };
 
-      if (unattachable) {
-        openItems.push(row);
-        continue;
-      }
-
-      // Where a question lands is decided by who may answer it, not by whether
-      // we happen to have a value. 'user' is the 17.7% that is theirs by right
-      // (FR-6) and it never appears in `answers`, even if a value existed.
-      switch (action.source) {
-        case 'profile':
-        case 'bank':
-        case 'file':
-          answers.push(row);
-          break;
-        case 'user':
-          yours.push(row);
-          break;
-        case 'generated':
-        case 'unresolved':
-          openItems.push(row);
-          break;
-      }
+      // 'user' is the 17.7% that is theirs by right (FR-6) and never appears
+      // in `answers`, even if a value existed. See bucketFor.
+      const bucket = bucketFor(action.source, attachedFilename !== null);
+      (bucket === 'answers' ? answers : bucket === 'yours' ? yours : openItems).push(row);
     }
 
     if (formFields !== null) {

@@ -76,15 +76,39 @@ export function ConnectExtension(): React.ReactElement {
 
   return (
     <div className="card flow">
-      <div className="row split">
-        <div>
-          <strong>Connect the autofill extension</strong>
-          <div className="sub">
-            Fills the employer’s form in your own browser, one click, and stops.
-            The submit button stays yours.
-          </div>
-        </div>
+      <div>
+        <strong>Connect the autofill extension</strong>
+        <p className="sub">
+          Fills the employer’s form in your own browser, one click, and stops.
+          The submit button stays yours.
+        </p>
       </div>
+
+      {/*
+        * How to get it. There was no way before: not in the Chrome Web Store,
+        * no download, so the one feature closest to "apply for me" existed
+        * only on a developer's laptop. The download is built for this site —
+        * its address is already inside — so step 4 is the only typing.
+        */}
+      <ol className="install-steps">
+        <li>
+          <a className="btn p" href="/api/extension/download" download>Download the extension</a>
+          <span className="sub"> Works in Chrome, Edge and Brave on a computer.</span>
+        </li>
+        <li>Unzip it. You get a folder called <span className="mono">landfall-extension</span>.</li>
+        <li>
+          Open <span className="mono">chrome://extensions</span> (or <span className="mono">edge://extensions</span>),
+          turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong> and choose that folder.
+        </li>
+        <li>
+          Click <strong>Create a connection code</strong> below, then paste it into the extension —
+          click its icon, open <strong>Connection</strong>, and save.
+        </li>
+      </ol>
+      <p className="sub">
+        It isn’t in the Chrome Web Store yet, which is why Developer mode is needed. It can only
+        read and fill job application pages and talk to Landfall — it cannot submit anything.
+      </p>
 
       {err && (
         <div className="note bad">
@@ -95,7 +119,7 @@ export function ConnectExtension(): React.ReactElement {
 
       {fresh && (
         <div className="note ok">
-          <span className="lbl">Your access token</span>
+          <span className="lbl">Your connection code — shown once</span>
           <p className="mono" style={{ overflowWrap: 'anywhere', userSelect: 'all' }}>
             {fresh.token}
           </p>
@@ -103,7 +127,7 @@ export function ConnectExtension(): React.ReactElement {
           <div className="row split">
             <span className="sub">Paste it into the extension popup, under Connection.</span>
             <button className="btn p" onClick={() => void copy()}>
-              {copied ? 'Copied' : 'Copy token'}
+              {copied ? 'Copied' : 'Copy code'}
             </button>
           </div>
         </div>
@@ -120,11 +144,11 @@ export function ConnectExtension(): React.ReactElement {
           />
         </label>
         <button className="btn p" disabled={busy} onClick={() => void connect()}>
-          {busy ? 'Working…' : 'Create a token'}
+          {busy ? 'Working…' : 'Create a connection code'}
         </button>
       </div>
 
-      <State loading={list.loading} error={list.error} empty={tokens.length === 0} rows={2}>
+      <State loading={list.loading} error={list.error} rows={2}>
         <div className="rows">
           {tokens.map((t) => (
             <div className="row split" key={t.id}>
@@ -144,10 +168,12 @@ export function ConnectExtension(): React.ReactElement {
         </div>
       </State>
 
-      <p className="sub">
-        Changing your password revokes every token here, so the extension will
-        need reconnecting afterwards.
-      </p>
+      {tokens.length > 0 && (
+        <p className="sub">
+          Changing your password disconnects every extension here, so it will
+          need reconnecting afterwards.
+        </p>
+      )}
     </div>
   );
 }

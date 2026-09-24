@@ -160,16 +160,7 @@ export function Resume(): React.ReactElement {
           {rows.length === 0 ? (
             <div className="note warn">
               <span className="lbl">No résumé on file</span>
-              <p>
-                Every form in the sample asks for one. Until there is a file here, the attachment
-                field on every application stays unanswered — and the match scores you see are
-                based only on the skills you have typed in by hand.
-              </p>
-              <p className="sub">
-                Once a file is up, <a href="#/parse">reading it into your profile</a> fills in your
-                roles, dates and bullets — each one shown with a confidence, for you to confirm or
-                correct. Nothing it reads is saved until you accept it.
-              </p>
+              <p>Every application form asks for one, and your matches are built from it. Upload it above.</p>
             </div>
           ) : (
             <div className="card flow">

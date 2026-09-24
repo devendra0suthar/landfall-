@@ -694,3 +694,8 @@ details.fold[open] > summary::before { transform: rotate(90deg); }
 }
 .chat-input.search-bar { position: static; margin: 0; max-width: none; box-shadow: var(--shadow); }
 .new-badge { margin-right: var(--s2); vertical-align: 1px; }
+
+/* ── installing the extension ── */
+.install-steps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--s3); }
+.install-steps li { padding-left: var(--s1); line-height: 1.55; }
+.install-steps li::marker { font-weight: 700; color: var(--deep); }

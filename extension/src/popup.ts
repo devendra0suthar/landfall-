@@ -169,9 +169,12 @@ function say(text: string): void {
   conn.out.textContent = text;
 }
 
+/** Replaced with the site's own address when downloaded from it (routes/extension.ts). */
+const POPUP_DEFAULT_API = 'http://127.0.0.1:5175';
+
 async function loadSettings(): Promise<void> {
   const got = await chrome.storage.local.get(['api', 'token']);
-  conn.api.value = typeof got.api === 'string' ? got.api : '';
+  conn.api.value = typeof got.api === 'string' && got.api ? got.api : POPUP_DEFAULT_API;
   // Never render the token back. Its presence is the only thing worth showing;
   // a field that redisplays a credential is a credential on a screen.
   conn.token.value = '';

@@ -34,6 +34,7 @@ const PUBLIC: Record<string, string> = {
   'POST /api/auth/login': 'the door — proves an existing one',
   'GET /api/jobs/resolve': 'employer posting data only; no candidate data is read (FR-24)',
   'GET /api/resume/templates': 'the list of layout names; depends on nothing about anybody',
+  'GET /api/extension/download': 'the extension\'s code, the same bytes for everyone on a site; the personal connection code is minted separately behind fresh auth',
   // Google sign-in is a door, like the two above it. Nothing here reads
   // candidate data; the callback *creates* the session rather than using one,
   // and it is guarded by the `state` cookie instead — see src/auth/google.ts.

@@ -25,6 +25,7 @@ import { scheduleIndexRefresh } from './ingest/refresh.js';
 import { registerRunRoutes } from './routes/run.js';
 import { registerAskRoutes } from './routes/ask.js';
 import { registerSearchRoutes } from './routes/searches.js';
+import { registerExtensionRoutes } from './routes/extension.js';
 
 /**
  * The API, and in production the front end too.
@@ -108,6 +109,7 @@ await registerKitRoutes(app);
 await registerRunRoutes(app);
 await registerAskRoutes(app);
 await registerSearchRoutes(app);
+await registerExtensionRoutes(app);
 await registerAnalyzeRoutes(app);
 await registerResumeRoutes(app);
 await registerApplicationRoutes(app);

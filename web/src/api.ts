@@ -205,6 +205,7 @@ export interface ParsedRole {
   company: ParsedField<string>;
   start: ParsedField<string>;
   end: ParsedField<string | null>;
+  location?: ParsedField<string>;
   bullets: Array<ParsedField<string>>;
 }
 

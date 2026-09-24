@@ -46,15 +46,12 @@ export function Run(): React.ReactElement {
 
       <div className="body">
         <div className="card flow">
+          {/* Short on purpose: on a phone the old two paragraphs plus three
+              stacked tiles pushed the first job ~900px down. */}
           <p>
-            Your best matches that you are eligible for and whose form Landfall can
-            read — each one already compiled from your own facts. Work down the list:
-            open the form, let the extension fill it, check it, and press their submit
-            button yourself.
-          </p>
-          <p className="sub">
-            Landfall never submits. That is the line, and it is why this prepares
-            applications rather than firing them off while you sleep.
+            Roles you can take, each form prepared from your own facts. Open their
+            form, let the extension fill it, check it, and submit it yourself —
+            Landfall never submits for you.
           </p>
         </div>
 
@@ -67,7 +64,7 @@ export function Run(): React.ReactElement {
           {d && (
             <>
               {d.items.length > 0 && (
-                <div className="grid">
+                <div className="grid stats">
                   <Stat n={d.totals.prepared} k="answers ready across this run" tone="ok" />
                   <Stat n={d.totals.yours} k="questions only you may answer" />
                   <Stat n={d.totals.open} k="still open — no answer on file yet" tone="warn" />
@@ -124,10 +121,13 @@ export function Run(): React.ReactElement {
   );
 }
 
-function Stat({ n, k, tone }: { n: number; k: string; tone?: string }): React.ReactElement {
+function Stat({ n, k, tone }: { n: number; k: string; tone?: 'ok' | 'warn' }): React.ReactElement {
+  // The tone colours the number and a top accent, never the whole tile: the
+  // count is the thing to read, and it must not rely on colour (the label says
+  // what it is).
   return (
-    <div className="stat">
-      <strong className={tone ? `chip ${tone}` : undefined}>{n.toLocaleString()}</strong>
+    <div className={tone ? `stat ${tone}` : 'stat'}>
+      <strong>{n.toLocaleString()}</strong>
       <span className="sub">{k}</span>
     </div>
   );
@@ -191,21 +191,31 @@ function RunLine({ item, n, onDone }: {
           {item.yours > 0 && <><span className="chip">{item.yours} yours</span>{' '}</>}
           {item.open > 0 && <span className="chip warn">{item.open} open</span>}
           {item.fields !== null && (
-            <span className="sub"> of {item.fields} fields on their form</span>
+            <span className="sub"> · {item.fields} questions on their form</span>
           )}
         </div>
       </div>
-      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        <a className="btn" href={`#/kit/${item.jobId}`}>Open kit</a>
-        <a className="btn p" href={item.url} target="_blank" rel="noreferrer">Their form ↗</a>
-        <button className="btn" disabled={busy} onClick={() => void act('APPLIED')}>
-          I applied
-        </button>
-        <button className="btn" disabled={busy} onClick={() => void act('SKIPPED')}>
-          Skip
-        </button>
+      {/*
+        * One primary action per row. Four equal buttons made every row a
+        * decision about which to press; the order of work is "open their form,
+        * fill, submit, then say so", and the weights now read in that order.
+        */}
+      <div className="run-actions">
+        <div className="run-go">
+          <a className="btn p" href={item.url} target="_blank" rel="noreferrer">Their form ↗</a>
+          <a className="btn" href={`#/kit/${item.jobId}`}>Open kit</a>
+        </div>
+        <div className="run-mark">
+          <button className="btn linkish" disabled={busy} onClick={() => void act('APPLIED')}>
+            I applied
+          </button>
+          <span aria-hidden="true">·</span>
+          <button className="btn linkish quiet" disabled={busy} onClick={() => void act('SKIPPED')}>
+            Skip
+          </button>
+        </div>
         {error && <span className="sub" role="alert">{error}</span>}
-      </span>
+      </div>
     </div>
   );
 }

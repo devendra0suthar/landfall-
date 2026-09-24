@@ -84,6 +84,7 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
             company: r.company.value,
             start: r.start.value,
             end: r.end.value,
+            location: r.location?.value ?? null,
             bullets: r.bullets.map((b) => b.value),
           })),
         }),
@@ -166,13 +167,10 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
             ))}
           </div>
           <input
+            className="review-input"
+            aria-label="Skills, separated by commas"
             value={skills}
             onChange={(e) => setSkills(e.target.value)}
-            style={{
-              fontFamily: 'inherit', fontSize: '0.88rem', padding: '7px 9px',
-              border: '1px solid var(--rule)', borderRadius: 4,
-              background: 'var(--surface)', color: 'var(--ink)',
-            }}
           />
           <p className="sub">
             Red ones are outside the matcher&rsquo;s vocabulary — keep them if they are true,
@@ -197,7 +195,9 @@ function Review({ data }: { data: ParseResponse }): React.ReactElement {
             <div key={`${r.company.value}-${r.title.value}`} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                 <strong>{r.title.value}</strong>
-                <span className="sub">{r.company.value}</span>
+                <span className="sub">
+                  {r.company.value}{r.location ? ` · ${r.location.value}` : ''}
+                </span>
                 <span className="mono" style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
                   {r.start.value || '?'} – {r.end.value ?? 'Present'}
                 </span>
@@ -235,21 +235,16 @@ function Row({ f, label, value, onChange }: {
 }): React.ReactElement {
   const flagged = f.confidence !== 'high';
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: '130px 1fr 110px', gap: 12, alignItems: 'center',
-      padding: '9px 10px', borderBottom: '1px solid var(--rule-soft)',
-      ...(flagged ? { borderLeft: '3px solid var(--brass)', background: '#fdfbf6' } : {}),
-    }}>
-      <span className="sub">{label}</span>
+    // Layout lives in .review-row, not inline: an inline grid cannot be
+    // overridden by the phone breakpoint, and on a 390px screen it squeezed
+    // every input to ~20px and wrapped each hint one word per line.
+    <div className={flagged ? 'review-row flagged' : 'review-row'}>
+      <label className="sub" htmlFor={`pf-${label.replace(/ /g, "-")}`}>{label}</label>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
         <input
+          id={`pf-${label.replace(/ /g, "-")}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          style={{
-            fontFamily: 'inherit', fontSize: '0.88rem', padding: '6px 8px',
-            border: `1px solid ${flagged ? 'var(--brass)' : 'var(--rule)'}`,
-            borderRadius: 3, background: 'var(--surface)', color: 'var(--ink)',
-          }}
         />
         {f.reason && <span className="sub">{f.reason}</span>}
         {f.alternatives && f.alternatives.length > 1 && (
@@ -267,7 +262,7 @@ function Row({ f, label, value, onChange }: {
           </div>
         )}
       </div>
-      <span className={TONE[f.confidence] ?? 'chip'} style={{ justifySelf: 'end' }}>
+      <span className={`${TONE[f.confidence] ?? 'chip'} conf`}>
         {f.confidence}
       </span>
     </div>

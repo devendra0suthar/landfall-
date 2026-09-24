@@ -183,6 +183,13 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
                 />
               </div>
 
+              {/*
+                * Straight after the counts, not after the résumé. It was the
+                * last thing on a ~4,000px page — the one action that saves the
+                * typing sat below everything you only need to skim.
+                */}
+              <ApplyWithExtension formState={k.form.state} url={k.job.url} />
+
               {score && (
                 <div className="card flow">
                   <header>
@@ -214,7 +221,7 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
                   title="Their questions, your answers"
                   note="In the employer’s own field order. Every value came from something you confirmed."
                 >
-                  {k.answers.map((q, i) => <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} />)}
+                  {k.answers.map((q, i) => <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} twin={twins(k, q)} />)}
                 </Section>
               )}
 
@@ -223,7 +230,7 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
                   title="Yours to answer"
                   note="Consent, attestations and demographic questions. Landfall never answers one of these on your behalf — ticking it would be making a statement in your name."
                 >
-                  {k.yours.map((q, i) => <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} />)}
+                  {k.yours.map((q, i) => <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} twin={twins(k, q)} />)}
                 </Section>
               )}
 
@@ -231,8 +238,11 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
                 <Section
                   title="Still open"
                   note="Answer these once and they are saved for every employer that asks the same thing."
+                  // The note promised "answer once" and the Kit had nowhere to
+                  // do it. The answering happens on Gaps; say where.
+                  action={<a className="btn" href="#/gaps">Answer them once →</a>}
                 >
-                  {k.openItems.map((q, i) => <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} />)}
+                  {k.openItems.map((q, i) => <Row key={`${q.fieldName ?? q.label}-${i}`} q={q} twin={twins(k, q)} />)}
                 </Section>
               )}
 
@@ -251,7 +261,6 @@ export function Kit({ jobId }: { jobId: string }): React.ReactElement {
               )}
 
               <Resume kit={k} jobId={jobId} />
-              <ApplyWithExtension formState={k.form.state} url={k.job.url} />
 
               <Letter kit={k} />
 
@@ -518,19 +527,34 @@ function Letter({ kit }: { kit: ApplicationKit }): React.ReactElement {
   );
 }
 
-function Section({ title, note, children }: {
-  title: string; note: string; children: React.ReactNode;
+function Section({ title, note, action, children }: {
+  title: string; note: string; action?: React.ReactNode; children: React.ReactNode;
 }): React.ReactElement {
   return (
     <div className="card flow">
-      <header><span className="lbl">{title}</span></header>
+      <header><span className="lbl">{title}</span>{action}</header>
       <p className="sub">{note}</p>
       <div className="rows">{children}</div>
     </div>
   );
 }
 
-function Row({ q }: { q: KitQuestion }): React.ReactElement {
+/**
+ * "2 of 2" when this label appears more than once on the form, else null.
+ *
+ * Two fields can carry the same label — Addepar's form has two "LinkedIn
+ * Profile" questions — and the candidate needs to tell them apart. The vendor's
+ * raw field name (question_12932115007[]) used to be printed under every
+ * question for that, which is noise on the 99% of rows that are not twins and
+ * meaningless on the rest.
+ */
+function twins(k: ApplicationKit, q: KitQuestion): string | null {
+  const all = [...k.answers, ...k.yours, ...k.openItems].filter((x) => x.label === q.label);
+  if (all.length < 2) return null;
+  return `${all.indexOf(q) + 1} of ${all.length} with this label`;
+}
+
+function Row({ q, twin }: { q: KitQuestion; twin: string | null }): React.ReactElement {
   const chip = SOURCE_CHIP[q.source];
   const [copied, setCopied] = useState(false);
 
@@ -564,10 +588,7 @@ function Row({ q }: { q: KitQuestion }): React.ReactElement {
         </span>
         {q.value !== null && <span className="mono">{q.value}</span>}
         {q.reason !== null && <span className="sub">{q.reason}</span>}
-        {/* Two fields can carry the same label — Addepar's form has two
-            "LinkedIn Profile" questions — so the vendor's own field name is
-            shown to disambiguate rather than deduping them away. */}
-        {q.fieldName !== null && <span className="sub mono">{q.fieldName}</span>}
+        {twin && <span className="sub" title={q.fieldName ?? undefined}>{twin}</span>}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
         <span className={chip.cls}>{chip.label}</span>
@@ -617,11 +638,10 @@ function Score({ k, v, note, tone }: {
 }
 
 function Stat({ n, k, tone }: { n: number; k: string; tone?: 'ok' | 'warn' | 'bad' }): React.ReactElement {
-  const colour = tone === 'ok' ? 'var(--good)' : tone === 'warn' ? 'var(--warn)'
-    : tone === 'bad' ? 'var(--stop)' : 'var(--ink)';
+  // Same tile as the run's, so the two screens show a count the same way.
   return (
-    <div className="card stat">
-      <strong style={{ color: colour }}>{n}</strong>
+    <div className={tone ? `card stat ${tone}` : 'card stat'}>
+      <strong>{n}</strong>
       <span className="sub">{k}</span>
     </div>
   );

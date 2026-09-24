@@ -71,6 +71,15 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }): React.
       <form className="card flow gate-card" onSubmit={(e) => void submit(e)}>
         <div>
           <span className="wordmark gate-mark">Landfall</span>
+          {/*
+            * The door was the only screen that never said what the product
+            * is. Someone arriving from a shared link saw a login form and a
+            * sentence about their "saved answers" before having any.
+            */}
+          <p className="gate-pitch">
+            Upload your résumé once. Landfall finds roles you can actually take and
+            prepares each application from your own words — you press submit.
+          </p>
           <p className="sub">
             {mode === 'in'
               ? 'Sign in to your applications, profile and saved answers.'

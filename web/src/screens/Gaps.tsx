@@ -153,7 +153,9 @@ function GapLine({ row, editable, tone, onSaved }: {
 
       {row.profileField && (
         <span className="sub">
-          Belongs on the profile, as <span className="mono">{row.profileField}</span>.
+          {/* Was "as <mono>currentCompany</mono>": a code name with nowhere to go. */}
+          A fact about you, so it lives on your profile —{' '}
+          <a href="#/profile">add it there</a> and every form that asks is filled.
         </span>
       )}
 

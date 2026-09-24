@@ -69,6 +69,8 @@ export function App(): React.ReactElement {
   const [route, setRoute] = useState<Route>(() => parse(window.location.hash));
   const [me, setMe] = useState<Me | null>(null);
   const [checked, setChecked] = useState(false);
+  /** Set when the session check itself failed — not the same as signed out. */
+  const [unreachable, setUnreachable] = useState<string | null>(null);
   const [reauth, setReauth] = useState(false);
 
   // Who is asking — answered once, before anything else renders. A screen that
@@ -77,10 +79,17 @@ export function App(): React.ReactElement {
   const check = useCallback(async (): Promise<void> => {
     try {
       setMe(await api<Me>('/api/auth/me'));
-    } catch {
-      // The API being down is not the same as being signed out, but from here
-      // they look identical and both end at the same screen.
-      setMe({ candidate: null });
+      setUnreachable(null);
+    } catch (e) {
+      // /me answers "signed out" as a 200 with candidate: null, so reaching
+      // here means the check failed — a cold start, a network drop, a 429.
+      // Showing the sign-in form for that told people they had been logged
+      // out when they had not, and sent them to retype a password into an
+      // endpoint that was refusing everything anyway.
+      const status = (e as { status?: number }).status;
+      setUnreachable(status === 429
+        ? 'Too many requests from your network just now.'
+        : 'Landfall could not be reached.');
     }
     setChecked(true);
   }, []);
@@ -111,6 +120,20 @@ export function App(): React.ReactElement {
 
   // A blank frame beats a flash of the app followed by the sign-in screen.
   if (!checked) return <div className="gate" aria-busy="true" />;
+  if (unreachable && !me) {
+    return (
+      <div className="gate">
+        <div className="card flow gate-card" role="alert">
+          <span className="wordmark gate-mark">Landfall</span>
+          <p>{unreachable} You are not signed out — nothing has changed on your account.</p>
+          <p className="sub">
+            If the site has been idle it can take up to a minute to wake. Try again in a moment.
+          </p>
+          <p><button className="btn p" onClick={() => void check()}>Try again</button></p>
+        </div>
+      </div>
+    );
+  }
   if (!me?.candidate) return <SignIn onSignedIn={(m) => { setMe(m); void check(); }} />;
 
   /**
@@ -156,16 +179,16 @@ export function App(): React.ReactElement {
           <a href="#/gaps" className={view.name === 'gaps' ? 'on' : ''}>Gaps</a>
           <a href="#/profile" className={view.name === 'profile' ? 'on' : ''}>Profile</a>
         </nav>
-        <div className="region" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="region">
           <Aim />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div className="who">
             <span className="lbl">Signed in as</span>
             <span className="mono" style={{ color: 'var(--nav-fg-dim)', overflowWrap: 'anywhere' }}>
               {me.candidate.email}
             </span>
             <button className="btn linkish navlink" onClick={() => void signOut()}>Sign out</button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div className="where">
             <span className="lbl">Your data lives in</span>
             <span className="mono" style={{ color: "var(--nav-fg-dim)" }}>India · ap-south-1</span>
           </div>

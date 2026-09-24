@@ -336,7 +336,7 @@ function SavedSearches({ rows, onChange }: { rows: SavedSearch[]; onChange: () =
               <strong>{r.label}</strong>
               <div className="sub">
                 {r.newCount > 0 && <><span className="chip ok">{r.newCount} new</span>{' '}</>}
-                {r.total.toLocaleString()} open now
+                {r.broken ? 'Saved by an older version — remove it and save it again from Ask.' : `${r.total.toLocaleString()} open now`}
               </div>
             </div>
             <div className="quick-actions">

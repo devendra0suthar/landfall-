@@ -125,12 +125,23 @@ export function refreshHours(env: NodeJS.ProcessEnv): number | null {
 
 /** Stale when the least recently read enabled board is older than `hours`. */
 export async function isStale(hours: number): Promise<boolean> {
-  const oldest = await prisma.board.findFirst({
-    where: { disabled: false },
-    orderBy: { lastFetchedAt: 'asc' },
-    select: { lastFetchedAt: true },
-  });
-  if (!oldest) return false;
-  if (!oldest.lastFetchedAt) return true;
-  return Date.now() - oldest.lastFetchedAt.getTime() > hours * 3_600_000;
+  const boards = await prisma.board.findMany({ where: { disabled: false }, select: { lastFetchedAt: true } });
+  return staleFrom(boards.map((b) => b.lastFetchedAt), hours, Date.now());
+}
+
+/**
+ * Stale when no board has been read successfully for `hours` — measured from
+ * the MOST RECENT read, which is when a refresh last ran.
+ *
+ * It used the oldest. An unreachable board never has its date updated (ingest
+ * returns before touching it), so one employer leaving Greenhouse would have
+ * kept the index "stale" forever and re-crawled all 21 boards every hour.
+ * An index where no board has ever been read is stale. (A board added with
+ * `pnpm ingest` is read as it is added, so it never needs this to be found.)
+ */
+export function staleFrom(fetched: Array<Date | null>, hours: number, now: number): boolean {
+  if (fetched.length === 0) return false;
+  if (fetched.every((d) => d === null)) return true;
+  const newest = Math.max(...fetched.filter((d): d is Date => d !== null).map((d) => d.getTime()));
+  return now - newest > hours * 3_600_000;
 }

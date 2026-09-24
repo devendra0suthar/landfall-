@@ -106,7 +106,7 @@ pnpm typecheck      both packages
 pnpm migrate dev --name <x>    a schema change as a real migration
 pnpm build          production build (prisma generate + web)
 pnpm start          migrate deploy, then serve API + web on one origin
-pnpm test           113 tests, no network — fixtures in api/test/fixtures/
+pnpm test           every test, no network — fixtures in api/test/fixtures/
 ```
 
 Local Postgres: role `landfall`, database `landfall`, see `api/.env.example`.

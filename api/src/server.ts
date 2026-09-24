@@ -86,18 +86,21 @@ await app.register(async (scope) => {
 await registerGoogleRoutes(app);
 
 app.get('/api/health', async () => {
-  const [jobs, open, oldest] = await Promise.all([
+  const [jobs, open, reads] = await Promise.all([
     prisma.job.count(),
     prisma.job.count({ where: { closedAt: null } }),
-    prisma.board.findFirst({ where: { disabled: false }, orderBy: { lastFetchedAt: 'asc' }, select: { lastFetchedAt: true } }),
+    prisma.board.aggregate({ where: { disabled: false }, _min: { lastFetchedAt: true }, _max: { lastFetchedAt: true } }),
   ]);
   return {
     ok: true,
     jobs,
     open,
-    // How stale the index is, from outside. Production once sat on its
-    // day-one data with nothing showing it; this is the number to watch.
-    indexedAt: oldest?.lastFetchedAt?.toISOString() ?? null,
+    // How fresh the index is, from outside. Production once sat on its
+    // day-one data with nothing showing it. `refreshedAt` is when a refresh
+    // last ran (what the scheduler measures); `indexedAt` is the least
+    // recently read board — if it lags far behind, a board has stopped answering.
+    refreshedAt: reads._max.lastFetchedAt?.toISOString() ?? null,
+    indexedAt: reads._min.lastFetchedAt?.toISOString() ?? null,
     region: process.env.LANDFALL_REGION ?? 'ap-south-1',
   };
 });

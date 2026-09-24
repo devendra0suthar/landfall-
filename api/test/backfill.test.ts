@@ -61,3 +61,15 @@ test('the index refreshes itself in production unless told not to, and never on 
   assert.equal(refreshHours({ NODE_ENV: 'production', INDEX_REFRESH_HOURS: '0' }), null, '0 turns it off');
   assert.equal(refreshHours({ INDEX_REFRESH_HOURS: '6' }), 6);
 });
+
+test('one unreachable board cannot make the index refresh every hour', async () => {
+  // Staleness used the OLDEST board read. A board that stopped answering never
+  // gets its date updated, so the index read as stale forever.
+  const { staleFrom } = await import('../src/ingest/refresh.js');
+  const now = Date.parse('2026-09-25T12:00:00Z');
+  const h = (n: number) => new Date(now - n * 3_600_000);
+  assert.equal(staleFrom([h(2), h(2), h(300)], 24, now), false, 'refreshed 2 h ago; one dead board is ignored');
+  assert.equal(staleFrom([h(25), h(26)], 24, now), true, 'nothing read for a day');
+  assert.equal(staleFrom([null, null], 24, now), true, 'never read at all');
+  assert.equal(staleFrom([], 24, now), false, 'no boards, nothing to do');
+});

@@ -525,4 +525,6 @@ export interface SavedSearch {
   /** Open postings matching it that entered the index since it was last opened. */
   newCount: number;
   lastSeenAt: string;
+  /** Saved by an older version in a shape this one cannot read. */
+  broken?: boolean;
 }

@@ -49,7 +49,14 @@ export async function registerSearchRoutes(app: FastifyInstance): Promise<void> 
     ]);
 
     const rows = await Promise.all(saved.map(async (s) => {
-      const { ids } = await matchingIds(s.filters as unknown as AskFilters, profile);
+      // Re-validated on the way out, not trusted: these were written by an
+      // earlier version, and if the filter shape ever changes, one stale row
+      // must not take the whole list (and Apply's card) down with it.
+      const valid = Filters.safeParse(s.filters);
+      if (!valid.success) {
+        return { id: s.id, label: s.label, filters: s.filters, total: 0, newCount: 0, lastSeenAt: s.lastSeenAt, broken: true };
+      }
+      const { ids } = await matchingIds(valid.data as AskFilters, profile);
       const fresh = ids.length === 0 ? 0 : await prisma.job.count({
         where: { id: { in: ids }, firstSeenAt: { gt: s.lastSeenAt } },
       });

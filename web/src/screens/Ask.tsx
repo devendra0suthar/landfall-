@@ -58,16 +58,20 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
 
   useEffect(() => { save(turns); end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }); }, [turns]);
 
-  async function send(body: { text?: string; filters?: AskFilters | null; newSince?: string }, shown: Turn): Promise<void> {
+  /** One turn. Resolves true only if the answer actually arrived. */
+  async function send(body: { text?: string; filters?: AskFilters | null; newSince?: string }, shown: Turn): Promise<boolean> {
     setBusy(true);
     setTurns((t) => [...t, shown]);
+    let ok = false;
     try {
       const reply = await api<AskReply>('/api/ask', { method: 'POST', body: JSON.stringify(body) });
       setTurns((t) => [...t, { reply }]);
+      ok = true;
     } catch (e) {
       setTurns((t) => [...t, { error: (e as Error).message }]);
     }
     setBusy(false);
+    return ok;
   }
 
   function ask(q: string): void {
@@ -87,11 +91,14 @@ export function Ask({ initial }: { initial?: string }): React.ReactElement {
       const list = await api<{ rows: SavedSearch[] }>('/api/searches');
       const saved = list.rows.find((r) => r.id === id);
       if (!saved) { setTurns((t) => [...t, { error: 'that saved search no longer exists' }]); return; }
-      await send(
+      const shown = await send(
         { filters: saved.filters, newSince: saved.lastSeenAt },
         { did: saved.newCount > 0 ? `Opened “${saved.label}” — ${saved.newCount} new since you last looked` : `Opened “${saved.label}”` },
       );
-      await api(`/api/searches/${encodeURIComponent(id)}/seen`, { method: 'POST' });
+      // Only once they have actually seen the results. send() swallows its
+      // own errors, so this used to run after a failed load too — and the
+      // "3 new" on Apply vanished without anyone seeing the three jobs.
+      if (shown) await api(`/api/searches/${encodeURIComponent(id)}/seen`, { method: 'POST' });
     } catch (e) {
       setTurns((t) => [...t, { error: (e as Error).message }]);
     }
